@@ -24,7 +24,7 @@ public class CorsConfig {
 
     private static final Logger log = LoggerFactory.getLogger(CorsConfig.class);
 
-    @Value("${CORS_ALLOWED_ORIGINS:}")
+    @Value("${app.cors.allowed-origins:}")
     private String additionalOrigins;
 
     @Bean
@@ -38,6 +38,9 @@ public class CorsConfig {
         config.addAllowedOrigin("http://localhost:5173");  // Vite dev server
         config.addAllowedOrigin("http://localhost:3000");  // Production/Docker frontend
         config.addAllowedOrigin("http://frontend:3000");   // Docker internal network
+
+        // Railway deployed frontend
+        config.addAllowedOrigin("https://frontend-production-22e8.up.railway.app");
 
         // Allow additional origins from environment (e.g. Railway deployed frontend)
         if (additionalOrigins != null && !additionalOrigins.isBlank()) {
