@@ -53,10 +53,9 @@ public class DatabaseSeedingConfig {
     }
     
     private boolean shouldRunSeeding() {
-        // Only seed in development environments by default
-        boolean isDevelopmentProfile = "local".equals(activeProfile) 
-            || "dev".equals(activeProfile)
-            || "docker".equals(activeProfile);
-        return seedingEnabled && isDevelopmentProfile;
+        // Seeding runs on all profiles when enabled.
+        // Individual seeders have idempotency guards (count checks, existsByName)
+        // so they safely skip if data already exists.
+        return seedingEnabled;
     }
 }

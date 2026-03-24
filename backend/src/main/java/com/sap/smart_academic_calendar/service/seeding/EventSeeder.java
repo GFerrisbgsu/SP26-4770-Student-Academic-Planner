@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.sap.smart_academic_calendar.model.Course;
@@ -22,8 +23,10 @@ import com.sap.smart_academic_calendar.repository.UserRepository;
 /**
  * Seeds class schedule events from enrolled courses.
  * Generates recurring class events for Spring 2026 semester.
+ * Only active in non-production profiles.
  */
 @Component
+@Profile({"local", "dev", "docker"})
 public class EventSeeder implements DataSeeder<Event> {
     
     private static final Logger log = LoggerFactory.getLogger(EventSeeder.class);

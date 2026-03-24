@@ -4,15 +4,17 @@ import com.sap.smart_academic_calendar.model.User;
 import com.sap.smart_academic_calendar.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 
 /**
  * Seeds initial user data for development and testing.
- * Example implementation of the DataSeeder interface.
+ * Only active in non-production profiles.
  */
 @Component
+@Profile({"local", "dev", "docker"})
 public class UserSeeder implements DataSeeder<User> {
     
     private static final Logger log = LoggerFactory.getLogger(UserSeeder.class);
