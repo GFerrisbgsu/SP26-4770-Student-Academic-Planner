@@ -1,5 +1,7 @@
 package com.sap.smart_academic_calendar.config;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,12 +15,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
  * to communicate with backend API (Spring Boot on localhost:8080).
  *
  * Exposes a CorsConfigurationSource bean so Spring Security's
- * .cors(Customizer.withDefaults()) picks it up and handles OPTIONS preflight correctly.
+ * .cors() picks it up and handles OPTIONS preflight correctly.
  *
  * In production, set CORS_ALLOWED_ORIGINS env var to your deployed frontend URL.
  */
 @Configuration
 public class CorsConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(CorsConfig.class);
 
     @Value("${CORS_ALLOWED_ORIGINS:}")
     private String additionalOrigins;
@@ -38,8 +42,12 @@ public class CorsConfig {
         // Allow additional origins from environment (e.g. Railway deployed frontend)
         if (additionalOrigins != null && !additionalOrigins.isBlank()) {
             for (String origin : additionalOrigins.split(",")) {
-                config.addAllowedOrigin(origin.trim());
+                String trimmed = origin.trim();
+                log.info("CORS: Adding allowed origin from env: '{}'", trimmed);
+                config.addAllowedOrigin(trimmed);
             }
+        } else {
+            log.warn("CORS: No additional origins configured (CORS_ALLOWED_ORIGINS is empty)");
         }
 
         // Allow all headers and methods including OPTIONS preflight
