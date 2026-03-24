@@ -1,5 +1,6 @@
 package com.sap.smart_academic_calendar.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -11,10 +12,13 @@ import org.springframework.web.filter.CorsFilter;
  * Enables Cross-Origin Resource Sharing to allow frontend (React app on localhost:5173)
  * to communicate with backend API (Spring Boot on localhost:8080).
  * 
- * In production, replace "http://localhost:5173" with your actual frontend domain.
+ * In production, set CORS_ALLOWED_ORIGINS env var to your deployed frontend URL.
  */
 @Configuration
 public class CorsConfig {
+
+    @Value("${CORS_ALLOWED_ORIGINS:}")
+    private String additionalOrigins;
 
     /**
      * Configure CORS filter to allow requests from frontend origin.
@@ -30,13 +34,17 @@ public class CorsConfig {
         // Allow credentials (cookies, authorization headers)
         config.setAllowCredentials(true);
         
-        // Allow frontend origins for development and production
+        // Allow frontend origins for development
         config.addAllowedOrigin("http://localhost:5173");  // Vite dev server
         config.addAllowedOrigin("http://localhost:3000");  // Production/Docker frontend
         config.addAllowedOrigin("http://frontend:3000");   // Docker internal network
         
-        // In production, you might want to allow your deployed frontend domain:
-        // config.addAllowedOrigin("https://yourdomain.com");
+        // Allow additional origins from environment (e.g. Railway deployed frontend)
+        if (additionalOrigins != null && !additionalOrigins.isBlank()) {
+            for (String origin : additionalOrigins.split(",")) {
+                config.addAllowedOrigin(origin.trim());
+            }
+        }
         
         // Allow all headers
         config.addAllowedHeader("*");
