@@ -1,0 +1,34 @@
+{
+  "name": "smart-academic-planner",
+  "version": "1.0.0",
+  "description": "Student Academic Planner - Monorepo containing frontend and backend",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && ./mvnw spring-boot:run",
+    "dev:backend:local": "cd backend && ./mvnw spring-boot:run -Dspring.profiles.active=local",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && ./mvnw clean package -DskipTests",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd backend && ./mvnw test",
+    "test:all": "npm run test:frontend && npm run test:backend",
+    "typecheck": "cd frontend && npm run typecheck",
+    "docker:up": "docker-compose up --build",
+    "docker:up:detached": "docker-compose up --build -d",
+    "docker:down": "docker-compose down",
+    "docker:down:volumes": "docker-compose down -v",
+    "docker:logs": "docker-compose logs -f",
+    "docker:db": "docker-compose up postgres pgadmin -d",
+    "install:frontend": "cd frontend && npm install",
+    "clean:all": "cd frontend && rm -rf node_modules build .react-router && cd ../backend && ./mvnw clean"
+  },
+  "keywords": [
+    "academic",
+    "planner",
+    "calendar",
+    "react",
+    "spring-boot"
+  ],
+  "author": "",
+  "license": "ISC"
+}

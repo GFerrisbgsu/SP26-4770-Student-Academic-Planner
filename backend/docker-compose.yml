@@ -1,0 +1,95 @@
+services:
+  # ============================================
+  # DATABASE SERVICES
+  # ============================================
+  postgres:
+    image: postgres:16
+    container_name: smart-academic-calendar-db
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+    ports:
+      - "5432:5432"
+    volumes:
+      - smart_calendar_data:/var/lib/postgresql/data
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: smart-academic-calendar-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - sap-network
+
+  # ============================================
+  # BACKEND SERVICE (Spring Boot + Flyway)
+  # ============================================
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-academic-calendar-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATASOURCE_URL: jdbc:postgresql://postgres:5432/appdb
+      DATASOURCE_USERNAME: appuser
+      DATASOURCE_PASSWORD: apppass
+      DATASOURCE_DRIVER: org.postgresql.Driver
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sap-network
+    volumes:
+      - shared_data:/app/shared
+
+  # ============================================
+  # FRONTEND SERVICE (React + Vite)
+  # ============================================
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080/api
+    container_name: smart-academic-calendar-frontend
+    environment:
+      VITE_API_URL: http://localhost:8080/api
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - sap-network
+    volumes:
+      - shared_data:/app/shared
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  sap-network:
+    driver: bridge
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  smart_calendar_data:
+  shared_data:

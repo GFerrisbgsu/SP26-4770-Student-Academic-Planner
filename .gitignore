@@ -1,0 +1,48 @@
+# ===================
+# Environment & OS
+# ===================
+.DS_Store
+.env
+.env.local
+.env.*.local
+
+# ===================
+# Frontend (Node.js/React)
+# ===================
+node_modules/
+frontend/.react-router/
+frontend/build/
+*.log
+npm-debug.log*
+
+# ===================
+# Backend (Java/Maven)
+# ===================
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+!backend/**/src/main/**/target/
+!backend/**/src/test/**/target/
+
+# IDE
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+*.code-workspace
+
+# Spring/Java
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/

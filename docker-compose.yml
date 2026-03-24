@@ -1,0 +1,109 @@
+services:
+  # ============================================
+  # DATABASE SERVICES
+  # ============================================
+  postgres:
+    image: postgres:16
+    container_name: smart-academic-calendar-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-appdb}
+      POSTGRES_USER: ${POSTGRES_USER:-appuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apppass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - smart_calendar_data:/var/lib/postgresql/data
+    networks:
+      - sap-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-appuser} -d ${POSTGRES_DB:-appdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: smart-academic-calendar-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - sap-network
+
+  # ============================================
+  # BACKEND SERVICE (Spring Boot + Flyway)
+  # ============================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smart-academic-calendar-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-appdb}
+      DATASOURCE_USERNAME: ${POSTGRES_USER:-appuser}
+      DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-apppass}
+      DATASOURCE_DRIVER: org.postgresql.Driver
+      # JWT Configuration
+      JWT_SECRET: ${JWT_SECRET:-bG9jYWwtZGV2LXNlY3JldC0zMi1ieXRlcy1sb25nISE=}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-60}
+      JWT_ACCESS_EXPIRATION_MINUTES: ${JWT_ACCESS_EXPIRATION_MINUTES:-15}
+      JWT_REFRESH_EXPIRATION_DAYS: ${JWT_REFRESH_EXPIRATION_DAYS:-7}
+      JWT_REFRESH_EXPIRATION_DAYS_REMEMBER_ME: ${JWT_REFRESH_EXPIRATION_DAYS_REMEMBER_ME:-30}
+      # WebAuthn Configuration
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-http://localhost:3000}
+      # Frontend URL for email links
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      # Email Configuration
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      EMAIL_FROM: ${RESEND_FROM_EMAIL:-onboarding@resend.dev}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sap-network
+    volumes:
+      - shared_data:/app/shared
+
+  # ============================================
+  # FRONTEND SERVICE (React + Vite)
+  # ============================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Build-time: Use localhost for API URL (accessible from browser)
+        VITE_API_URL: http://localhost:8080/api
+    container_name: smart-academic-calendar-frontend
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - sap-network
+    volumes:
+      - shared_data:/app/shared
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  sap-network:
+    driver: bridge
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  smart_calendar_data:
+  shared_data:
