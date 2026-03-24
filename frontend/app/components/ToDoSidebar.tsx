@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Resizable } from 're-resizable';
 import { Circle, CheckCircle2, Plus, Trash2, FolderOpen, ChevronDown, ChevronRight, Info, MapPin, FileText, Edit2, FolderPlus, GripVertical } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
 import {
   DndContext,
   PointerSensor,
@@ -473,7 +476,7 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
     if (isBackendEvent(eventToDelete.id)) {
       // Backend event - call delete API
       try {
-        const response = await fetch(`http://localhost:8080/api/events/${eventToDelete.id}`, {
+        const response = await fetch(`${API_BASE_URL}/events/${eventToDelete.id}`, {
           method: 'DELETE',
           credentials: 'include',
         });
@@ -510,7 +513,7 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
       try {
         const endpoint = isChecked ? 'complete' : 'uncomplete';
         
-        const response = await fetch(`http://localhost:8080/api/events/${event.id}/${endpoint}`, {
+        const response = await fetch(`${API_BASE_URL}/events/${event.id}/${endpoint}`, {
           method: 'PUT',
           credentials: 'include', // Send HttpOnly cookies for authentication
           headers: {

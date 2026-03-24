@@ -4,6 +4,8 @@ import { Mail, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
 export default function EmailVerificationPage() {
   const [code, setCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -29,7 +31,7 @@ export default function EmailVerificationPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/verify-email', {
+      const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -62,7 +64,7 @@ export default function EmailVerificationPage() {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/resend-verification', {
+      const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

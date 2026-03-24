@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:8080/api/user-preferences';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+const BASE_URL = `${API_BASE_URL}/user-preferences`;
 
 export interface UserPreference {
   id: number;

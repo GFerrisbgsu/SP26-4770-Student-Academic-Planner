@@ -3,6 +3,8 @@ import { User, Mail, Phone, LogOut, Camera } from 'lucide-react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '~/context/AuthContext';
 import { PasskeyManagement } from '~/components/PasskeyManagement';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 import { ChangePasswordSection } from '~/components/ChangePasswordSection';
 import { Avatar } from '~/components/Avatar';
 import { NotificationPermissionButton } from '~/components/NotificationPermissionButton';
@@ -39,7 +41,7 @@ export function ProfilePage() {
     setIsLoggingOut(true);
     try {
       // Call backend logout endpoint
-      await fetch('http://localhost:8080/api/auth/logout', {
+      await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       }).catch(() => {

@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 import {
   Dialog,
   DialogContent,
@@ -41,7 +43,7 @@ export function ForgotPasswordModal({ open, onOpenChange }: ForgotPasswordModalP
       }
 
       // Call password reset API
-      const response = await fetch('http://localhost:8080/api/auth/request-password-reset', {
+      const response = await fetch(`${API_BASE_URL}/auth/request-password-reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim() }),

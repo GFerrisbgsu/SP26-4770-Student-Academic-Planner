@@ -25,7 +25,7 @@ export interface CreateTodoListRequest {
   listOrder?: number;
 }
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 /**
  * Get all to-do lists for the authenticated user

@@ -8,6 +8,7 @@ import { useAuth } from '~/context/AuthContext';
 import type { CalendarEvent } from '~/utils/generateEvents';
 import { addCustomTag, getAllTagConfigs } from '~/utils/tagUtils';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const fallbackTagColors = ['blue', 'green', 'orange', 'pink', 'indigo', 'emerald', 'amber', 'rose'];
 
 function getFallbackTagColor(tagKey: string): string {
@@ -170,7 +171,7 @@ export default function Home() {
       date: formattedDate  // Convert Date to string format or null
     };
 
-    const res = await fetch(`http://localhost:8080/api/events/user/${userId}`, {
+    const res = await fetch(`${API_BASE_URL}/events/user/${userId}`, {
       method: 'POST',
       credentials: 'include', // Send HttpOnly cookies for authentication
       headers: { 
@@ -212,7 +213,7 @@ const handleRemoveEvent = async (eventId: string) => {
   try {
     console.log("Removing event:", eventId);
 
-    const res = await fetch(`http://localhost:8080/api/events/${eventId}`, { 
+    const res = await fetch(`${API_BASE_URL}/events/${eventId}`, { 
       method: 'DELETE',
       credentials: 'include', // Use HttpOnly cookies for auth
     });

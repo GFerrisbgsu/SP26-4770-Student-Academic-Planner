@@ -4,6 +4,8 @@ import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
 import { AlertCircle, CheckCircle2, Loader2, Lock, Eye, EyeOff } from 'lucide-react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+
 export function ChangePasswordSection() {
   // Form state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -62,7 +64,7 @@ export function ChangePasswordSection() {
       }
 
       // Call change password API
-      const response = await fetch('http://localhost:8080/api/auth/change-password', {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
