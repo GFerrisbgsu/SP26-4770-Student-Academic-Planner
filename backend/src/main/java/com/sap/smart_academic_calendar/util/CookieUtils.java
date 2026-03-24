@@ -16,10 +16,14 @@ public class CookieUtils {
     public static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
 
     private final boolean isProduction;
+    private final String sameSitePolicy;
 
     public CookieUtils(@Value("${spring.profiles.active:local}") String activeProfile) {
         // Set Secure flag only in dev, docker, and prod profiles (not local)
         this.isProduction = !activeProfile.equals("local");
+        // Cross-origin deployments (e.g. Railway) need SameSite=None so cookies are sent;
+        // local dev uses Strict for CSRF protection.
+        this.sameSitePolicy = activeProfile.equals("prod") ? "None" : "Strict";
     }
 
     /**
@@ -36,7 +40,7 @@ public class CookieUtils {
         cookie.setSecure(isProduction);  // HTTPS only in production
         cookie.setPath("/");  // Available to entire application
         cookie.setMaxAge(maxAgeSeconds);  // Cookie expiration
-        cookie.setAttribute("SameSite", "Strict");  // CSRF protection
+        cookie.setAttribute("SameSite", sameSitePolicy);
         return cookie;
     }
 
@@ -54,7 +58,7 @@ public class CookieUtils {
         cookie.setSecure(isProduction);  // HTTPS only in production
         cookie.setPath("/");  // Available to entire application
         cookie.setMaxAge(maxAgeSeconds);  // Cookie expiration
-        cookie.setAttribute("SameSite", "Strict");  // CSRF protection
+        cookie.setAttribute("SameSite", sameSitePolicy);
         return cookie;
     }
 
@@ -70,7 +74,7 @@ public class CookieUtils {
         cookie.setSecure(isProduction);
         cookie.setPath("/");
         cookie.setMaxAge(0);  // Deletes the cookie immediately
-        cookie.setAttribute("SameSite", "Strict");
+        cookie.setAttribute("SameSite", sameSitePolicy);
         return cookie;
     }
 
