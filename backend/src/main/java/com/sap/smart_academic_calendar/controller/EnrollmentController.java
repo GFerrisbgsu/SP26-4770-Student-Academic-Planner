@@ -3,6 +3,8 @@ package com.sap.smart_academic_calendar.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -30,6 +32,8 @@ import com.sap.smart_academic_calendar.service.EnrollmentService;
 @RequestMapping("/api/enrollments")
 public class EnrollmentController {
 
+    private static final Logger log = LoggerFactory.getLogger(EnrollmentController.class);
+
     private final EnrollmentService enrollmentService;
     private final UserRepository userRepository;
 
@@ -42,28 +46,46 @@ public class EnrollmentController {
      * GET /api/enrollments — all enrollments for the authenticated user.
      */
     @GetMapping
-    public ResponseEntity<List<UserCourseEnrollmentDTO>> getAllEnrollments() {
-        Long userId = getAuthenticatedUserId();
-        return ResponseEntity.ok(enrollmentService.getUserEnrollments(userId));
+    public ResponseEntity<?> getAllEnrollments() {
+        try {
+            Long userId = getAuthenticatedUserId();
+            return ResponseEntity.ok(enrollmentService.getUserEnrollments(userId));
+        } catch (RuntimeException e) {
+            log.error("Failed to get enrollments", e);
+            if ("User not found".equals(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
+            }
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
      * GET /api/enrollments/semester/{semesterId} — enrollments for a specific semester.
      */
     @GetMapping("/semester/{semesterId}")
-    public ResponseEntity<List<UserCourseEnrollmentDTO>> getEnrollmentsForSemester(
+    public ResponseEntity<?> getEnrollmentsForSemester(
             @PathVariable Long semesterId) {
-        Long userId = getAuthenticatedUserId();
-        return ResponseEntity.ok(enrollmentService.getUserEnrollmentsForSemester(userId, semesterId));
+        try {
+            Long userId = getAuthenticatedUserId();
+            return ResponseEntity.ok(enrollmentService.getUserEnrollmentsForSemester(userId, semesterId));
+        } catch (RuntimeException e) {
+            log.error("Failed to get semester enrollments", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
      * GET /api/enrollments/credits/{semesterId} — total credits for a semester.
      */
     @GetMapping("/credits/{semesterId}")
-    public ResponseEntity<Integer> getSemesterCredits(@PathVariable Long semesterId) {
-        Long userId = getAuthenticatedUserId();
-        return ResponseEntity.ok(enrollmentService.getSemesterCredits(userId, semesterId));
+    public ResponseEntity<?> getSemesterCredits(@PathVariable Long semesterId) {
+        try {
+            Long userId = getAuthenticatedUserId();
+            return ResponseEntity.ok(enrollmentService.getSemesterCredits(userId, semesterId));
+        } catch (RuntimeException e) {
+            log.error("Failed to get semester credits", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**

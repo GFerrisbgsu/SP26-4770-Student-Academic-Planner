@@ -59,6 +59,7 @@ public class EnrollmentService {
     /**
      * Returns all enrollments for a user (across all semesters).
      */
+    @Transactional(readOnly = true)
     public List<UserCourseEnrollmentDTO> getUserEnrollments(Long userId) {
         return enrollmentRepository.findByUserId(userId).stream()
                 .map(this::toDTO)
@@ -68,6 +69,7 @@ public class EnrollmentService {
     /**
      * Returns enrollments for a specific semester.
      */
+    @Transactional(readOnly = true)
     public List<UserCourseEnrollmentDTO> getUserEnrollmentsForSemester(Long userId, Long semesterId) {
         return enrollmentRepository.findByUserIdAndSemesterId(userId, semesterId).stream()
                 .map(this::toDTO)

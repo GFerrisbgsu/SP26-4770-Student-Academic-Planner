@@ -3,6 +3,9 @@ package com.sap.smart_academic_calendar.controller;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +28,8 @@ import com.sap.smart_academic_calendar.service.SemesterService;
 @RequestMapping("/api/semesters")
 public class SemesterController {
 
+    private static final Logger log = LoggerFactory.getLogger(SemesterController.class);
+
     private final SemesterService semesterService;
     private final UserRepository userRepository;
 
@@ -45,9 +50,17 @@ public class SemesterController {
      * GET /api/semesters/current — returns the authenticated user's current semester.
      */
     @GetMapping("/current")
-    public ResponseEntity<UserSemesterDTO> getCurrentSemester() {
-        Long userId = getAuthenticatedUserId();
-        return ResponseEntity.ok(semesterService.getUserCurrentSemester(userId));
+    public ResponseEntity<?> getCurrentSemester() {
+        try {
+            Long userId = getAuthenticatedUserId();
+            return ResponseEntity.ok(semesterService.getUserCurrentSemester(userId));
+        } catch (RuntimeException e) {
+            log.error("Failed to get current semester", e);
+            if ("User not found".equals(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
+            }
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 
     /**
