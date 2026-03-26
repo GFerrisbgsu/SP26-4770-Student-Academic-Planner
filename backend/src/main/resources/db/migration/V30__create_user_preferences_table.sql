@@ -1,4 +1,4 @@
-CREATE TABLE user_preferences (
+CREATE TABLE IF NOT EXISTS user_preferences (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     preference_key VARCHAR(100) NOT NULL,
@@ -9,4 +9,4 @@ CREATE TABLE user_preferences (
     CONSTRAINT uq_user_preferences_user_key UNIQUE (user_id, preference_key)
 );
 
-CREATE INDEX idx_user_preferences_user_id ON user_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
