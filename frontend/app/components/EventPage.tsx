@@ -84,7 +84,7 @@ function createEditStateFromEvent(event: CalendarEvent): EventEditData {
     startTime: event.startTime,
     endTime: event.endTime,
     location: event.location || '',
-    type: event.type,
+    type: event.type === 'class' ? 'class' : 'event',
     description: event.description || '',
     tag: event.tag,
     completed: event.completed || false,

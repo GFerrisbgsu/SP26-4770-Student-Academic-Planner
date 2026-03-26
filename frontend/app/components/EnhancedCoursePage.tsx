@@ -1,29 +1,43 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router';
-import { ArrowLeft, BookOpen, Clock, User, MapPin, FileText, Calendar, GraduationCap, BookMarked, Tag, Plus, X, Upload, Download, File, StickyNote, Edit2, Check, Trash2, Save, Folder, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
+import { ArrowLeft, BookOpen, Clock, User, MapPin, FileText, Calendar, GraduationCap, BookMarked, Tag, Plus, X, Upload, Download, File, StickyNote, Edit2, Check, Trash2, Save, Folder, Image as ImageIcon, Link as LinkIcon, ClipboardList, Circle, CheckCircle2 } from 'lucide-react';
 import { getAllCourses } from '~/services/courseService';
+import {
+  getAssignmentsByCourse,
+  createAssignment,
+  updateAssignment,
+  deleteAssignment,
+  type Assignment,
+  type AssignmentStatus,
+} from '~/services/assignmentService';
+import { notifyAssignmentsChanged, subscribeAssignmentsChanged } from '~/utils/assignmentSync';
+import {
+  getNotesByCourse,
+  createNote,
+  updateNote,
+  deleteNote as deleteCourseNote,
+  type CourseNote,
+} from '~/services/noteService';
+import {
+  getFilesByCourse,
+  createFile,
+  deleteFile as deleteCourseFile,
+  type CourseFileItem,
+  type CourseFileType,
+  type CourseFileCategory,
+} from '~/services/fileService';
 import type { Course } from '~/types/course';
 // ...existing code...
 import canvasLogo from '~/assets/22343b487a124e74995e468c0388ab2b6ab33dd7.png';
 import coursicleLogo from '~/assets/8a64e37773e95c0484d47cd65db7a39fb7ef7f7d.png';
 
 interface Note {
-  id: string;
+  id: number;
   title: string;
   content: string;
   date: Date;
   lastEdited: Date;
   tags: string[];
-}
-
-interface CourseFile {
-  id: string;
-  name: string;
-  type: 'pdf' | 'image' | 'document' | 'link' | 'folder';
-  size?: string;
-  uploadDate: Date;
-  url?: string;
-  category: 'syllabus' | 'lecture' | 'assignment' | 'resource' | 'other';
 }
 
 interface CoursePageProps {
@@ -39,10 +53,17 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'files'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'assignments' | 'notes' | 'files'>('overview');
   const [isEditingDetails, setIsEditingDetails] = useState(false);
   const [editedInstructor, setEditedInstructor] = useState('');
   const [editedLocation, setEditedLocation] = useState('');
+
+  useEffect(() => {
+    const tabParam = new URLSearchParams(location.search).get('tab');
+    if (tabParam === 'overview' || tabParam === 'assignments' || tabParam === 'notes' || tabParam === 'files') {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     async function loadCourses() {
@@ -65,73 +86,120 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
   }, [courseId]);
   
   // Notes state
-  const [notes, setNotes] = useState<Note[]>([
-    {
-      id: '1',
-      title: 'Lecture 1: Introduction',
-      content: 'Key concepts:\n- Programming fundamentals\n- Variables and data types\n- Control structures\n\nImportant: Assignment due next week on Chapter 1',
-      date: new Date('2026-01-15'),
-      lastEdited: new Date('2026-01-16'),
-      tags: ['lecture', 'intro']
-    },
-    {
-      id: '2',
-      title: 'Study Notes - Midterm Prep',
-      content: 'Topics to review:\n1. Arrays and loops\n2. Functions\n3. Object-oriented basics\n\nPractice problems: 5.1-5.5',
-      date: new Date('2026-01-20'),
-      lastEdited: new Date('2026-01-22'),
-      tags: ['exam', 'study']
-    }
-  ]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [noteTitle, setNoteTitle] = useState('');
   const [noteContent, setNoteContent] = useState('');
 
-  // Files state
-  const [files, setFiles] = useState<CourseFile[]>([
-    {
-      id: '1',
-      name: 'Course Syllabus.pdf',
-      type: 'pdf',
-      size: '245 KB',
-      uploadDate: new Date('2026-01-10'),
-      category: 'syllabus'
-    },
-    {
-      id: '2',
-      name: 'Lecture Slides',
-      type: 'folder',
-      uploadDate: new Date('2026-01-15'),
-      category: 'lecture'
-    },
-    {
-      id: '3',
-      name: 'Week 1 Assignment.pdf',
-      type: 'pdf',
-      size: '120 KB',
-      uploadDate: new Date('2026-01-17'),
-      category: 'assignment'
-    },
-    {
-      id: '4',
-      name: 'Textbook Resources',
-      type: 'link',
-      uploadDate: new Date('2026-01-10'),
-      url: 'https://example.com/textbook',
-      category: 'resource'
-    },
-    {
-      id: '5',
-      name: 'Class Diagram.png',
-      type: 'image',
-      size: '890 KB',
-      uploadDate: new Date('2026-01-20'),
-      category: 'lecture'
+  // Assignments state
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(true);
+  const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'todo' | 'in-progress' | 'completed'>('all');
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [assignmentTitle, setAssignmentTitle] = useState('');
+  const [assignmentDueDate, setAssignmentDueDate] = useState('');
+  const [assignmentPoints, setAssignmentPoints] = useState('');
+  const [assignmentDescription, setAssignmentDescription] = useState('');
+
+  const loadAssignments = useCallback(async () => {
+    if (!courseId) {
+      setAssignments([]);
+      setAssignmentsLoading(false);
+      return;
     }
-  ]);
+
+    try {
+      setAssignmentsLoading(true);
+      const assignmentData = await getAssignmentsByCourse(courseId);
+      setAssignments(assignmentData);
+    } catch (error) {
+      console.error('Failed to load assignments:', error);
+      setAssignments([]);
+    } finally {
+      setAssignmentsLoading(false);
+    }
+  }, [courseId]);
+
+  useEffect(() => {
+    loadAssignments();
+  }, [loadAssignments]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeAssignmentsChanged((payload) => {
+      if (!courseId || !payload.courseId || payload.courseId === courseId) {
+        loadAssignments();
+      }
+    });
+
+    return unsubscribe;
+  }, [courseId, loadAssignments]);
+
+  // Files state
+  const [files, setFiles] = useState<CourseFileItem[]>([]);
+  const [filesLoading, setFilesLoading] = useState(true);
   const [showFileModal, setShowFileModal] = useState(false);
-  const [fileFilter, setFileFilter] = useState<'all' | 'syllabus' | 'lecture' | 'assignment' | 'resource' | 'other'>('all');
+  const [fileFilter, setFileFilter] = useState<'all' | CourseFileCategory>('all');
+  const [fileName, setFileName] = useState('');
+  const [fileType, setFileType] = useState<CourseFileType>('pdf');
+  const [fileCategory, setFileCategory] = useState<CourseFileCategory>('other');
+  const [fileSize, setFileSize] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
+
+  useEffect(() => {
+    async function loadNotes() {
+      if (!courseId) {
+        setNotes([]);
+        setNotesLoading(false);
+        return;
+      }
+
+      try {
+        setNotesLoading(true);
+        const noteData = await getNotesByCourse(courseId);
+        const mappedNotes: Note[] = noteData.map((note: CourseNote) => ({
+          id: note.id,
+          title: note.title,
+          content: note.content,
+          date: note.createdAt,
+          lastEdited: note.updatedAt,
+          tags: [],
+        }));
+        setNotes(mappedNotes);
+      } catch (error) {
+        console.error('Failed to load notes:', error);
+        setNotes([]);
+      } finally {
+        setNotesLoading(false);
+      }
+    }
+
+    loadNotes();
+  }, [courseId]);
+
+  useEffect(() => {
+    async function loadFiles() {
+      if (!courseId) {
+        setFiles([]);
+        setFilesLoading(false);
+        return;
+      }
+
+      try {
+        setFilesLoading(true);
+        const fileData = await getFilesByCourse(courseId);
+        setFiles(fileData);
+      } catch (error) {
+        console.error('Failed to load files:', error);
+        setFiles([]);
+      } finally {
+        setFilesLoading(false);
+      }
+    }
+
+    loadFiles();
+  }, [courseId]);
 
   if (loading) {
     return (
@@ -162,34 +230,64 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
   // Use custom color if available
   const courseColor = courseColors[course.id] || course.color;
 
-  const handleSaveNote = () => {
+  const resetNoteForm = () => {
+    setEditingNote(null);
+    setNoteTitle('');
+    setNoteContent('');
+  };
+
+  const handleSaveNote = async () => {
     if (!noteTitle.trim() || !noteContent.trim()) {
       alert('Please fill in both title and content');
       return;
     }
 
-    if (editingNote) {
-      setNotes(prev => prev.map(n => 
-        n.id === editingNote.id 
-          ? { ...n, title: noteTitle, content: noteContent, lastEdited: new Date() }
-          : n
-      ));
-    } else {
-      const newNote: Note = {
-        id: Date.now().toString(),
-        title: noteTitle,
-        content: noteContent,
-        date: new Date(),
-        lastEdited: new Date(),
-        tags: []
-      };
-      setNotes(prev => [newNote, ...prev]);
+    if (!courseId) {
+      alert('Course not found. Unable to save note.');
+      return;
     }
 
-    setShowNoteModal(false);
-    setEditingNote(null);
-    setNoteTitle('');
-    setNoteContent('');
+    try {
+      if (editingNote) {
+        const updated = await updateNote(editingNote.id, {
+          title: noteTitle,
+          content: noteContent,
+        });
+        setNotes(prev =>
+          prev.map(n =>
+            n.id === editingNote.id
+              ? {
+                  ...n,
+                  title: updated.title,
+                  content: updated.content,
+                  lastEdited: updated.updatedAt,
+                }
+              : n
+          )
+        );
+      } else {
+        const created = await createNote(courseId, {
+          title: noteTitle,
+          content: noteContent,
+        });
+
+        const newNote: Note = {
+          id: created.id,
+          title: created.title,
+          content: created.content,
+          date: created.createdAt,
+          lastEdited: created.updatedAt,
+          tags: [],
+        };
+        setNotes(prev => [newNote, ...prev]);
+      }
+
+      setShowNoteModal(false);
+      resetNoteForm();
+    } catch (error) {
+      console.error('Failed to save note:', error);
+      alert('Failed to save note. Please try again.');
+    }
   };
 
   const handleEditNote = (note: Note) => {
@@ -199,15 +297,63 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
     setShowNoteModal(true);
   };
 
-  const handleDeleteNote = (id: string) => {
+  const handleDeleteNote = async (id: number) => {
     if (confirm('Are you sure you want to delete this note?')) {
-      setNotes(prev => prev.filter(n => n.id !== id));
+      try {
+        await deleteCourseNote(id);
+        setNotes(prev => prev.filter(n => n.id !== id));
+      } catch (error) {
+        console.error('Failed to delete note:', error);
+        alert('Failed to delete note. Please try again.');
+      }
     }
   };
 
-  const handleDeleteFile = (id: string) => {
+  const resetFileForm = () => {
+    setFileName('');
+    setFileType('pdf');
+    setFileCategory('other');
+    setFileSize('');
+    setFileUrl('');
+  };
+
+  const handleSaveFile = async () => {
+    if (!fileName.trim()) {
+      alert('Please provide a file name.');
+      return;
+    }
+
+    if (!courseId) {
+      alert('Course not found. Unable to save file.');
+      return;
+    }
+
+    try {
+      const createdFile = await createFile(courseId, {
+        name: fileName.trim(),
+        fileType,
+        category: fileCategory,
+        fileSize: fileSize.trim() || undefined,
+        fileUrl: fileUrl.trim() || undefined,
+      });
+      setFiles(prev => [createdFile, ...prev]);
+      setShowFileModal(false);
+      resetFileForm();
+    } catch (error) {
+      console.error('Failed to save file:', error);
+      alert('Failed to save file. Please try again.');
+    }
+  };
+
+  const handleDeleteFile = async (id: number) => {
     if (confirm('Are you sure you want to delete this file?')) {
-      setFiles(prev => prev.filter(f => f.id !== id));
+      try {
+        await deleteCourseFile(id);
+        setFiles(prev => prev.filter(f => f.id !== id));
+      } catch (error) {
+        console.error('Failed to delete file:', error);
+        alert('Failed to delete file. Please try again.');
+      }
     }
   };
 
@@ -215,7 +361,110 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
     ? files 
     : files.filter(f => f.category === fileFilter);
 
-  const getFileIcon = (type: CourseFile['type']) => {
+  const sortedAssignments = [...assignments].sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime());
+
+  const filteredAssignments = assignmentFilter === 'all'
+    ? sortedAssignments
+    : sortedAssignments.filter(assignment => assignment.status === assignmentFilter);
+
+  const upcomingAssignments = sortedAssignments.filter(assignment => assignment.status !== 'completed');
+  const completedAssignments = sortedAssignments.filter(assignment => assignment.status === 'completed');
+
+  const formatForDateTimeInput = (date: Date) => {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hours = `${date.getHours()}`.padStart(2, '0');
+    const minutes = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
+  const resetAssignmentForm = () => {
+    setAssignmentTitle('');
+    setAssignmentDueDate('');
+    setAssignmentPoints('');
+    setAssignmentDescription('');
+  };
+
+  const handleSaveAssignment = async () => {
+    if (!assignmentTitle.trim() || !assignmentDueDate) {
+      alert('Please provide an assignment title and due date');
+      return;
+    }
+
+    if (!courseId) {
+      alert('Course not found. Unable to save assignment.');
+      return;
+    }
+
+    try {
+      const createdAssignment = await createAssignment(courseId, {
+        title: assignmentTitle.trim(),
+        dueDate: assignmentDueDate,
+        points: assignmentPoints.trim() ? Number(assignmentPoints) : undefined,
+        description: assignmentDescription.trim() || undefined,
+      });
+      setAssignments(prev => [...prev, createdAssignment]);
+      notifyAssignmentsChanged({
+        assignmentId: createdAssignment.id,
+        courseId,
+      });
+      setShowAssignmentModal(false);
+      resetAssignmentForm();
+    } catch (error) {
+      console.error('Failed to create assignment:', error);
+      alert('Failed to create assignment. Please try again.');
+    }
+  };
+
+  const handleDeleteAssignment = async (id: number) => {
+    if (confirm('Are you sure you want to delete this assignment?')) {
+      try {
+        await deleteAssignment(id);
+        setAssignments(prev => prev.filter(assignment => assignment.id !== id));
+        notifyAssignmentsChanged({
+          assignmentId: id,
+          courseId,
+        });
+      } catch (error) {
+        console.error('Failed to delete assignment:', error);
+        alert('Failed to delete assignment. Please try again.');
+      }
+    }
+  };
+
+  const handleCycleAssignmentStatus = async (assignment: Assignment) => {
+    let nextStatus: AssignmentStatus = 'todo';
+    if (assignment.status === 'todo') {
+      nextStatus = 'in-progress';
+    } else if (assignment.status === 'in-progress') {
+      nextStatus = 'completed';
+    }
+
+    try {
+      const updatedItem = await updateAssignment(assignment.id, { status: nextStatus });
+      setAssignments(prev => prev.map(item => (item.id === assignment.id ? updatedItem : item)));
+      notifyAssignmentsChanged({
+        assignmentId: assignment.id,
+        courseId,
+      });
+    } catch (error) {
+      console.error('Failed to update assignment status:', error);
+      alert('Failed to update assignment status. Please try again.');
+    }
+  };
+
+  const getAssignmentStatusClasses = (status: Assignment['status']) => {
+    if (status === 'completed') {
+      return 'bg-green-50 text-green-700';
+    }
+    if (status === 'in-progress') {
+      return 'bg-amber-50 text-amber-700';
+    }
+    return 'bg-gray-100 text-gray-700';
+  };
+
+  const getFileIcon = (type: CourseFileType) => {
     switch (type) {
       case 'pdf':
       case 'document':
@@ -354,7 +603,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
 
             <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-200">
               <div className="text-center">
-                <div className="text-2xl font-semibold text-gray-900">--</div>
+                <div className="text-2xl font-semibold text-gray-900">{upcomingAssignments.length}</div>
                 <div className="text-sm text-gray-600">Assignments</div>
               </div>
               <div className="text-center">
@@ -374,6 +623,13 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
             >
               <BookOpen className="w-4 h-4" />
               Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('assignments')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'assignments' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'}`}
+            >
+              <ClipboardList className="w-4 h-4" />
+              Assignments ({upcomingAssignments.length})
             </button>
             <button
               onClick={() => setActiveTab('notes')}
@@ -460,8 +716,124 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                   <h2 className="text-lg font-semibold">Upcoming Assignments</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <p className="text-sm text-gray-500 col-span-2">No upcoming assignments</p>
+                  {upcomingAssignments.slice(0, 4).map(assignment => (
+                    <div key={assignment.id} className="p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <p className="font-medium text-sm text-gray-900">{assignment.title}</p>
+                        <span className={`px-2 py-0.5 text-xs rounded ${getAssignmentStatusClasses(assignment.status)}`}>
+                          {assignment.status.replace('-', ' ')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">Due {assignment.dueDate.toLocaleString()}</p>
+                    </div>
+                  ))}
+                  {upcomingAssignments.length === 0 && (
+                    <p className="text-sm text-gray-500 col-span-2">No upcoming assignments</p>
+                  )}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'assignments' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold">Assignments</h2>
+                <div className="flex gap-3">
+                  <select
+                    value={assignmentFilter}
+                    onChange={(e) => setAssignmentFilter(e.target.value as typeof assignmentFilter)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All</option>
+                    <option value="todo">To do</option>
+                    <option value="in-progress">In progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <button
+                    onClick={() => {
+                      setAssignmentTitle('');
+                      setAssignmentDueDate(formatForDateTimeInput(new Date()));
+                      setAssignmentPoints('');
+                      setAssignmentDescription('');
+                      setShowAssignmentModal(true);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Assignment
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                  <p className="text-sm text-gray-600">Upcoming</p>
+                  <p className="text-2xl font-semibold text-gray-900">{upcomingAssignments.length}</p>
+                </div>
+                <div className="p-4 rounded-lg border border-gray-200 bg-gray-50">
+                  <p className="text-sm text-gray-600">Completed</p>
+                  <p className="text-2xl font-semibold text-gray-900">{completedAssignments.length}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {filteredAssignments.map(assignment => (
+                  <div key={assignment.id} className="p-4 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1">
+                        <button
+                          onClick={() => handleCycleAssignmentStatus(assignment)}
+                          className="mt-0.5 text-gray-400 hover:text-blue-600 transition-colors"
+                          aria-label={`Change status for ${assignment.title}`}
+                        >
+                          {assignment.status === 'completed' ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          ) : (
+                            <Circle className="w-5 h-5" />
+                          )}
+                        </button>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className={`font-medium ${assignment.status === 'completed' ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                              {assignment.title}
+                            </p>
+                            <span className={`px-2 py-0.5 text-xs rounded ${getAssignmentStatusClasses(assignment.status)}`}>
+                              {assignment.status.replace('-', ' ')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">Due {assignment.dueDate.toLocaleString()}</p>
+                          {typeof assignment.points === 'number' && (
+                            <p className="text-xs text-gray-500 mt-1">{assignment.points} points</p>
+                          )}
+                          {assignment.description && (
+                            <p className="text-sm text-gray-600 mt-2">{assignment.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteAssignment(assignment.id)}
+                        className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                        aria-label={`Delete ${assignment.title}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {assignmentsLoading && (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>Loading assignments...</p>
+                  </div>
+                )}
+
+                {!assignmentsLoading && filteredAssignments.length === 0 && (
+                  <div className="text-center py-12 text-gray-500">
+                    <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                    <p>No assignments found for this filter.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -472,9 +844,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                 <h2 className="text-lg font-semibold">Course Notes</h2>
                 <button
                   onClick={() => {
-                    setEditingNote(null);
-                    setNoteTitle('');
-                    setNoteContent('');
+                    resetNoteForm();
                     setShowNoteModal(true);
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -520,10 +890,16 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                   </div>
                 ))}
 
-                {notes.length === 0 && (
+                {!notesLoading && notes.length === 0 && (
                   <div className="col-span-2 text-center py-12 text-gray-500">
                     <StickyNote className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                     <p>No notes yet. Create your first note to get started!</p>
+                  </div>
+                )}
+
+                {notesLoading && (
+                  <div className="col-span-2 text-center py-12 text-gray-500">
+                    <p>Loading notes...</p>
                   </div>
                 )}
               </div>
@@ -548,7 +924,10 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                     <option value="other">Other</option>
                   </select>
                   <button
-                    onClick={() => setShowFileModal(true)}
+                    onClick={() => {
+                      resetFileForm();
+                      setShowFileModal(true);
+                    }}
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <Upload className="w-4 h-4" />
@@ -590,10 +969,16 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                   </div>
                 ))}
 
-                {filteredFiles.length === 0 && (
+                {!filesLoading && filteredFiles.length === 0 && (
                   <div className="text-center py-12 text-gray-500">
                     <Folder className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                     <p>No files found in this category.</p>
+                  </div>
+                )}
+
+                {filesLoading && (
+                  <div className="text-center py-12 text-gray-500">
+                    <p>Loading files...</p>
                   </div>
                 )}
               </div>
@@ -601,6 +986,105 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
           )}
         </div>
       </div>
+
+      {/* Assignment Modal */}
+      {showAssignmentModal && (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">New Assignment</h2>
+                <button
+                  onClick={() => {
+                    setShowAssignmentModal(false);
+                    resetAssignmentForm();
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="assignment-title" className="block text-sm font-medium text-gray-700 mb-1">
+                  Title
+                </label>
+                <input
+                  id="assignment-title"
+                  type="text"
+                  value={assignmentTitle}
+                  onChange={(e) => setAssignmentTitle(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter assignment title"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="assignment-due-date" className="block text-sm font-medium text-gray-700 mb-1">
+                    Due date
+                  </label>
+                  <input
+                    id="assignment-due-date"
+                    type="datetime-local"
+                    value={assignmentDueDate}
+                    onChange={(e) => setAssignmentDueDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="assignment-points" className="block text-sm font-medium text-gray-700 mb-1">
+                    Points (optional)
+                  </label>
+                  <input
+                    id="assignment-points"
+                    type="number"
+                    min="0"
+                    value={assignmentPoints}
+                    onChange={(e) => setAssignmentPoints(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="assignment-description" className="block text-sm font-medium text-gray-700 mb-1">
+                  Description (optional)
+                </label>
+                <textarea
+                  id="assignment-description"
+                  value={assignmentDescription}
+                  onChange={(e) => setAssignmentDescription(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
+                  placeholder="Add assignment details"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowAssignmentModal(false);
+                  resetAssignmentForm();
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAssignment}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Save Assignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Note Modal */}
       {showNoteModal && (
@@ -614,9 +1098,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                 <button
                   onClick={() => {
                     setShowNoteModal(false);
-                    setEditingNote(null);
-                    setNoteTitle('');
-                    setNoteContent('');
+                    resetNoteForm();
                   }}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -658,9 +1140,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
               <button
                 onClick={() => {
                   setShowNoteModal(false);
-                  setEditingNote(null);
-                  setNoteTitle('');
-                  setNoteContent('');
+                  resetNoteForm();
                 }}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
@@ -686,7 +1166,10 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Upload File</h2>
                 <button
-                  onClick={() => setShowFileModal(false)}
+                  onClick={() => {
+                    setShowFileModal(false);
+                    resetFileForm();
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <X className="w-5 h-5" />
@@ -694,39 +1177,102 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
-                <Upload className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                <p className="text-sm text-gray-600 mb-1">Click to upload or drag and drop</p>
-                <p className="text-xs text-gray-500">PDF, DOC, PNG, JPG up to 10MB</p>
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="file-name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input
+                  id="file-name"
+                  type="text"
+                  value={fileName}
+                  onChange={(e) => setFileName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. Week 3 Slides.pdf"
+                />
               </div>
 
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category
-                </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option>Syllabus</option>
-                  <option>Lecture</option>
-                  <option>Assignment</option>
-                  <option>Resource</option>
-                  <option>Other</option>
-                </select>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="file-type" className="block text-sm font-medium text-gray-700 mb-1">
+                    Type
+                  </label>
+                  <select
+                    id="file-type"
+                    value={fileType}
+                    onChange={(e) => setFileType(e.target.value as CourseFileType)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="pdf">PDF</option>
+                    <option value="document">Document</option>
+                    <option value="image">Image</option>
+                    <option value="link">Link</option>
+                    <option value="folder">Folder</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="file-category" className="block text-sm font-medium text-gray-700 mb-1">
+                    Category
+                  </label>
+                  <select
+                    id="file-category"
+                    value={fileCategory}
+                    onChange={(e) => setFileCategory(e.target.value as CourseFileCategory)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="syllabus">Syllabus</option>
+                    <option value="lecture">Lecture</option>
+                    <option value="assignment">Assignment</option>
+                    <option value="resource">Resource</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="file-size" className="block text-sm font-medium text-gray-700 mb-1">
+                    Size (optional)
+                  </label>
+                  <input
+                    id="file-size"
+                    type="text"
+                    value={fileSize}
+                    onChange={(e) => setFileSize(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. 245 KB"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="file-url" className="block text-sm font-medium text-gray-700 mb-1">
+                    URL (optional)
+                  </label>
+                  <input
+                    id="file-url"
+                    type="url"
+                    value={fileUrl}
+                    onChange={(e) => setFileUrl(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://..."
+                  />
+                </div>
               </div>
             </div>
 
             <div className="p-6 border-t border-gray-200 flex gap-3 justify-end">
               <button
-                onClick={() => setShowFileModal(false)}
+                onClick={() => {
+                  setShowFileModal(false);
+                  resetFileForm();
+                }}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  alert('File upload functionality would be implemented here');
-                  setShowFileModal(false);
-                }}
+                onClick={handleSaveFile}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Upload

@@ -5,6 +5,7 @@
  */
 
 import type { UserDTO, CreateUserRequest, LoginRequest, LoginResponse } from '~/types/user';
+import { apiFetch } from '~/services/apiClient';
 
 // Base API URL - Uses environment variable with fallback for local development
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
@@ -226,36 +227,50 @@ export class UserService {
    */
   async refreshToken(): Promise<boolean> {
     try {
+      console.log('[UserService] Calling /api/auth/refresh...');
       const response = await fetch(`${this.baseUrl}/auth/refresh`, {
         method: 'POST',
         credentials: 'include', // Send refresh token cookie
       });
 
-      return response.ok;
+      console.log('[UserService] Refresh response status:', response.status);
+      
+      if (response.ok) {
+        console.log('[UserService] Token refresh successful');
+        return true;
+      } else {
+        console.error('[UserService] Token refresh failed with status:', response.status);
+        const text = await response.text();
+        console.error('[UserService] Refresh error body:', text);
+        return false;
+      }
     } catch (error) {
-      console.error('Error refreshing token:', error);
+      console.error('[UserService] Error refreshing token:', error);
       return false;
     }
   }
 
   /**
    * Get current authenticated user from backend
+   * Uses apiFetch for automatic 401 retry with token refresh
    * @returns Promise<UserDTO> - Current user data
    */
   async getCurrentUserFromBackend(): Promise<UserDTO> {
     try {
-      const response = await fetch(`${this.baseUrl}/auth/me`, {
+      console.log('[UserService] Fetching current user from /api/auth/me');
+      const response = await apiFetch(`${this.baseUrl}/auth/me`, {
         method: 'GET',
-        credentials: 'include', // Send access token cookie
       });
 
       if (!response.ok) {
         throw new Error('Failed to get current user');
       }
 
-      return await response.json();
+      const user = await response.json();
+      console.log('[UserService] Current user fetched:', user.username);
+      return user;
     } catch (error) {
-      console.error('Error getting current user:', error);
+      console.error('[UserService] Error getting current user:', error);
       throw error;
     }
   }

@@ -1,12 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { Plus, Clock, X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Zap, Save, Upload, LayoutGrid, Columns2 } from 'lucide-react';
 import { getAllEventsForMonth } from '~/utils/generateEvents';
 import type { CalendarEvent, CourseForEvents } from '~/utils/generateEvents';
 import { getEnrolledCourses } from '~/services/courseService';
-import { tagConfig, getTagInfo, getAllTags } from '~/utils/tagUtils';
+import { getTagInfo, getAllTags } from '~/utils/tagUtils';
 import type { EventTag } from '~/utils/tagUtils';
-// ...existing code...
 
 interface TimeBlock {
   id: string;
@@ -22,6 +21,12 @@ interface TimeBlock {
 
 type ViewMode = 'daily' | 'weekly';
 type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 6 = Saturday
+
+// Time blocking constants
+const HOUR_HEIGHT = 80; // pixels per hour
+const DEFAULT_VIEW_START_HOUR = 6; // 6 AM
+const CONTAINER_HEIGHT = 600; // pixels
+const SCROLL_OFFSET = 100; // offset for centering the default view
 
 interface TimeBlockingProps {
   customEvents?: CalendarEvent[];
@@ -48,68 +53,67 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     loadCourses();
   }, []);
   
-  // Store presets by day of week (0-6)
-  const [presets, setPresets] = useState<Record<number, Omit<TimeBlock, 'id' | 'date' | 'isCalendarEvent' | 'calendarEventId'>[]>>({
-    1: [ // Monday preset example
-      {
-        title: 'Morning Routine',
-        startTime: 7,
-        endTime: 8,
-        tag: 'personal',
-        description: 'Breakfast, shower, get ready'
-      }
-    ]
+  // Store presets by day of week (0-6) - load from localStorage or use defaults
+  const [presets, setPresets] = useState<Record<number, Omit<TimeBlock, 'id' | 'date' | 'isCalendarEvent' | 'calendarEventId'>[]>>(() => {
+    try {
+      const saved = localStorage.getItem('timeBlockingPresets');
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error('Failed to load presets from localStorage:', error);
+      return {};
+    }
   });
   
-  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>([
-    {
-      id: '1',
-      title: 'Morning Routine',
-      startTime: 7,
-      endTime: 8,
-      tag: 'personal',
-      description: 'Breakfast, shower, get ready',
-      date: new Date().toISOString().split('T')[0]
-    },
-    {
-      id: '2',
-      title: 'Study Session',
-      startTime: 11,
-      endTime: 13,
-      tag: 'school',
-      description: 'Review lecture notes and work on assignments',
-      date: new Date().toISOString().split('T')[0]
-    },
-    {
-      id: '3',
-      title: 'Lunch Break',
-      startTime: 13,
-      endTime: 14,
-      tag: 'personal',
-      date: new Date().toISOString().split('T')[0]
-    },
-    {
-      id: '4',
-      title: 'Work Shift',
-      startTime: 15,
-      endTime: 19,
-      tag: 'work',
-      description: 'Part-time job at library',
-      date: new Date().toISOString().split('T')[0]
-    },
-    {
-      id: '5',
-      title: 'Gym',
-      startTime: 19.5,
-      endTime: 21,
-      tag: 'fun',
-      date: new Date().toISOString().split('T')[0]
-    },
-  ]);
+  const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>(() => {
+    try {
+      const saved = localStorage.getItem('timeBlocks');
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error('Failed to load time blocks from localStorage:', error);
+      return [];
+    }
+  });
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPresetModal, setShowPresetModal] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
+
+  // Persist time blocks to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('timeBlocks', JSON.stringify(timeBlocks));
+    } catch (error) {
+      console.error('Failed to save time blocks to localStorage:', error);
+    }
+  }, [timeBlocks]);
+
+  // Persist presets to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('timeBlockingPresets', JSON.stringify(presets));
+    } catch (error) {
+      console.error('Failed to save presets to localStorage:', error);
+    }
+  }, [presets]);
+  
+  // Drag-to-create state
+  const [dragStart, setDragStart] = useState<{ hour: number; y: number } | null>(null);
+  const [dragCurrent, setDragCurrent] = useState<{ hour: number; y: number } | null>(null);
+  const [draggedDate, setDraggedDate] = useState<Date | null>(null);
+
+  // Move/resize state
+  const [moveState, setMoveState] = useState<{ blockId: string; startY: number; originalStart: number; originalEnd: number; date: string } | null>(null);
+  const [resizeState, setResizeState] = useState<{ blockId: string; handle: 'top' | 'bottom'; startY: number; originalStart: number; originalEnd: number; date: string } | null>(null);
+
+  // Helper to get consistent date string (without timezone issues)
+  // MUST be defined before functions that use it to avoid temporal dead zone errors
+  const getDateString = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   // Convert calendar events to time blocks
   const getCalendarEventsForDate = (date: Date): TimeBlock[] => {
@@ -144,13 +148,13 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
         description: event.description,
         isCalendarEvent: true,
         calendarEventId: event.id,
-        date: date.toISOString().split('T')[0]
+        date: getDateString(date)
       }));
   };
 
   // Get blocks for a specific date
   const getBlocksForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = getDateString(date);
     const dayBlocks = timeBlocks.filter(b => b.date === dateStr);
     
     if (showCalendarEvents) {
@@ -194,7 +198,7 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
   
   // Preset management functions
   const savePresetForDay = (dayOfWeek: DayOfWeek) => {
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = getDateString(selectedDate);
     const dayBlocks = timeBlocks.filter(b => b.date === dateStr && !b.isCalendarEvent);
     
     const presetBlocks = dayBlocks.map(({ id, date, isCalendarEvent, calendarEventId, ...rest }) => rest);
@@ -214,7 +218,7 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
       return;
     }
     
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = getDateString(selectedDate);
     
     // Convert preset blocks to time blocks with current date
     const newBlocks = preset.map(block => ({
@@ -228,8 +232,9 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     setShowPresetModal(false);
   };
 
-  // Time slots from 6 AM to 11 PM
-  const timeSlots = Array.from({ length: 17 }, (_, i) => i + 6);
+  // Time slots from 12 AM to 11:59 PM (all 24 hours)
+  // Default view shows 6 AM - 11 PM, but users can scroll to see earlier/later times
+  const timeSlots = Array.from({ length: 24 }, (_, i) => i);
 
   const formatTime = (time: number): string => {
     const hours = Math.floor(time);
@@ -262,9 +267,9 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
   };
 
   const calculateBlockPosition = (block: TimeBlock) => {
-    const startOffset = (block.startTime - 6) * 80; // 80px per hour
+    const startOffset = block.startTime * HOUR_HEIGHT;
     const duration = block.endTime - block.startTime;
-    const height = duration * 80;
+    const height = duration * HOUR_HEIGHT;
     return { top: startOffset, height };
   };
 
@@ -275,12 +280,31 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     }
   };
 
+  const handleCopyBlock = (targetDate: Date) => {
+    if (!selectedBlock || selectedBlock.isCalendarEvent) {
+      alert('Cannot copy calendar events');
+      return;
+    }
+
+    const dateStr = getDateString(targetDate);
+    const newBlock: TimeBlock = {
+      ...selectedBlock,
+      id: `block-${Date.now()}-${Math.random()}`,
+      date: dateStr
+    };
+
+    setTimeBlocks(prev => [...prev, newBlock]);
+    setShowCopyModal(false);
+    setSelectedBlock(null);
+    alert(`Block "${newBlock.title}" copied to ${targetDate.toLocaleDateString()}`);
+  };
+
   const getTotalTimeByTag = () => {
     // start with zero for every known tag
     const totals: Record<string, number> = {};
     getAllTags().forEach(tag => (totals[tag] = 0));
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = getDateString(selectedDate);
     timeBlocks.filter(b => b.date === dateStr).forEach(block => {
       const duration = block.endTime - block.startTime;
       if (!(block.tag in totals)) {
@@ -290,6 +314,189 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     });
 
     return totals;
+  };
+
+  // Convert pixel position to time in decimal hours
+  const pixelToTime = (pixelY: number): number => {
+    const offsetFromTop = pixelY;
+    const hours = offsetFromTop / HOUR_HEIGHT;
+    return DEFAULT_VIEW_START_HOUR + hours;
+  };
+
+  // Handle block move start
+  const handleMoveStart = (e: React.MouseEvent, blockId: string, block: TimeBlock) => {
+    e.stopPropagation(); // Prevent triggering drag-to-create
+    if (e.button !== 0) return; // Only left click
+    
+    const dateStr = block.date || getDateString(selectedDate);
+    const container = e.currentTarget.closest('[data-time-grid]');
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    
+    setMoveState({
+      blockId,
+      startY: y,
+      originalStart: block.startTime,
+      originalEnd: block.endTime,
+      date: dateStr
+    });
+  };
+
+  // Handle block resize start
+  const handleResizeStart = (e: React.MouseEvent, blockId: string, handle: 'top' | 'bottom', block: TimeBlock) => {
+    e.stopPropagation(); // Prevent triggering drag-to-create or move
+    if (e.button !== 0) return; // Only left click
+    
+    const dateStr = block.date || getDateString(selectedDate);
+    const container = e.currentTarget.closest('[data-time-grid]');
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    
+    setResizeState({
+      blockId,
+      handle,
+      startY: y,
+      originalStart: block.startTime,
+      originalEnd: block.endTime,
+      date: dateStr
+    });
+  };
+
+  // Handle move/resize drag
+  const handleMoveResizeDrag = (e: React.MouseEvent<HTMLDivElement>) => {
+    const timeGrid = (e.currentTarget as HTMLElement).closest('[data-time-grid]');
+    if (!timeGrid) return;
+    
+    const rect = timeGrid.getBoundingClientRect();
+    const currentY = e.clientY - rect.top;
+
+    if (moveState) {
+      const deltaPixels = currentY - moveState.startY;
+      const deltaHours = deltaPixels / HOUR_HEIGHT;
+      const newStart = Math.max(0, Math.min(24, moveState.originalStart + deltaHours));
+      const duration = moveState.originalEnd - moveState.originalStart;
+      const newEnd = Math.min(24, newStart + duration);
+
+      setTimeBlocks(prev => prev.map(b => 
+        b.id === moveState.blockId && b.date === moveState.date
+          ? { ...b, startTime: newStart, endTime: newEnd }
+          : b
+      ));
+    } else if (resizeState) {
+      const deltaPixels = currentY - resizeState.startY;
+      const deltaHours = deltaPixels / HOUR_HEIGHT;
+
+      if (resizeState.handle === 'top') {
+        const newStart = Math.max(0, Math.min(resizeState.originalEnd - 0.25, resizeState.originalStart + deltaHours));
+        setTimeBlocks(prev => prev.map(b => 
+          b.id === resizeState.blockId && b.date === resizeState.date
+            ? { ...b, startTime: newStart }
+            : b
+        ));
+      } else {
+        const newEnd = Math.max(resizeState.originalStart + 0.25, Math.min(24, resizeState.originalEnd + deltaHours));
+        setTimeBlocks(prev => prev.map(b => 
+          b.id === resizeState.blockId && b.date === resizeState.date
+            ? { ...b, endTime: newEnd }
+            : b
+        ));
+      }
+    }
+  };
+
+  // Handle move/resize end
+  const handleMoveResizeEnd = () => {
+    setMoveState(null);
+    setResizeState(null);
+  };
+
+  // Handle drag start in daily view
+  const handleDragStartDaily = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return; // Only left mouse button
+    
+    // Only trigger drag-to-create if clicking directly on the background (not on a block)
+    if ((e.target as HTMLElement).closest('[data-time-grid] > div > div')) {
+      return; // Clicked on something inside the grid, not background
+    }
+    
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const time = pixelToTime(y);
+    
+    setDragStart({ hour: time, y });
+    setDragCurrent({ hour: time, y });
+    setDraggedDate(selectedDate);
+  };
+
+  // Handle drag start in weekly view
+  const handleDragStartWeekly = (e: React.MouseEvent<HTMLDivElement>, date: Date) => {
+    if (e.button !== 0) return; // Only left mouse button
+    
+    // Only trigger drag-to-create if clicking directly on the background (not on a block)
+    if ((e.target as HTMLElement).closest('[data-time-grid] > div')) {
+      return; // Clicked on something inside the grid, not background
+    }
+    
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const time = pixelToTime(y);
+    
+    setDragStart({ hour: time, y });
+    setDragCurrent({ hour: time, y });
+    setDraggedDate(date);
+  };
+
+  // Handle drag move
+  const handleDragMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragStart) return;
+    
+    const timeGrid = (e.currentTarget as HTMLElement).closest('[data-time-grid]');
+    if (!timeGrid) return;
+    
+    const rect = timeGrid.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const time = pixelToTime(y);
+    
+    setDragCurrent({ hour: time, y });
+  };
+
+  // Handle drag end
+  const handleDragEnd = () => {
+    if (!dragStart || !dragCurrent || !draggedDate) {
+      setDragStart(null);
+      setDragCurrent(null);
+      setDraggedDate(null);
+      return;
+    }
+
+    const startTime = Math.min(dragStart.hour, dragCurrent.hour);
+    const endTime = Math.max(dragStart.hour, dragCurrent.hour);
+    
+    // Minimum 15 minute blocks
+    if (endTime - startTime < 0.25) {
+      setDragStart(null);
+      setDragCurrent(null);
+      setDraggedDate(null);
+      return;
+    }
+
+    // Open modal with pre-filled times
+    setShowAddModal(true);
+    
+    // Store the drag info for the modal to use
+    (window as any).__dragInfo = {
+      startTime,
+      endTime,
+      date: draggedDate
+    };
+
+    setDragStart(null);
+    setDragCurrent(null);
+    setDraggedDate(null);
   };
 
   const timeTotals = getTotalTimeByTag();
@@ -390,6 +597,15 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
                 calculateBlockPosition={calculateBlockPosition}
                 formatTime={formatTime}
                 onBlockClick={setSelectedBlock}
+                dragStart={dragStart}
+                dragCurrent={dragCurrent}
+                onDragStart={handleDragStartDaily}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+                onMoveStart={handleMoveStart}
+                onResizeStart={handleResizeStart}
+                onMoveResizeDrag={handleMoveResizeDrag}
+                onMoveResizeEnd={handleMoveResizeEnd}
               />
             ) : (
               <WeeklyView 
@@ -400,6 +616,16 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
                 formatTime={formatTime}
                 onBlockClick={setSelectedBlock}
                 onDateClick={setSelectedDate}
+                dragStart={dragStart}
+                dragCurrent={dragCurrent}
+                draggedDate={draggedDate}
+                onDragStart={handleDragStartWeekly}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+                onMoveStart={handleMoveStart}
+                onResizeStart={handleResizeStart}
+                onMoveResizeDrag={handleMoveResizeDrag}
+                onMoveResizeEnd={handleMoveResizeEnd}
               />
             )}
           </div>
@@ -511,12 +737,20 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
               </div>
 
               {!selectedBlock.isCalendarEvent && (
-                <button
-                  onClick={() => handleDeleteBlock(selectedBlock.id)}
-                  className="mt-4 w-full px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                >
-                  Delete Block
-                </button>
+                <div className="flex gap-2 mt-4">
+                  <button
+                    onClick={() => setShowCopyModal(true)}
+                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                  >
+                    Copy to Another Day
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBlock(selectedBlock.id)}
+                    className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                  >
+                    Delete Block
+                  </button>
+                </div>
               )}
               
               {selectedBlock.isCalendarEvent && (
@@ -534,9 +768,19 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
             selectedDate={selectedDate}
             onClose={() => setShowAddModal(false)}
             onAdd={(block) => {
-              setTimeBlocks(prev => [...prev, { ...block, id: `block-${Date.now()}`, date: selectedDate.toISOString().split('T')[0] }]);
+              const year = selectedDate.getFullYear();
+              const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+              const day = String(selectedDate.getDate()).padStart(2, '0');
+              const dateStr = `${year}-${month}-${day}`;
+              
+              setTimeBlocks(prev => [...prev, { ...block, id: `block-${Date.now()}`, date: dateStr }]);
               setShowAddModal(false);
+              setDragStart(null);
+              setDragCurrent(null);
+              setDraggedDate(null);
             }}
+            dragStart={dragStart}
+            dragCurrent={dragCurrent}
           />
         )}
 
@@ -548,6 +792,16 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
             onClose={() => setShowPresetModal(false)}
             onSave={savePresetForDay}
             onLoad={loadPresetForDay}
+          />
+        )}
+
+        {/* Copy Block Modal */}
+        {showCopyModal && selectedBlock && (
+          <CopyBlockModal
+            block={selectedBlock}
+            currentDate={selectedDate}
+            onClose={() => setShowCopyModal(false)}
+            onCopy={handleCopyBlock}
           />
         )}
       </div>
@@ -562,27 +816,82 @@ interface DailyViewProps {
   calculateBlockPosition: (block: TimeBlock) => { top: number; height: number };
   formatTime: (time: number) => string;
   onBlockClick: (block: TimeBlock) => void;
+  dragStart?: { hour: number; y: number } | null;
+  dragCurrent?: { hour: number; y: number } | null;
+  onDragStart?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onDragMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
+  onMoveStart?: (e: React.MouseEvent, blockId: string, block: TimeBlock) => void;
+  onResizeStart?: (e: React.MouseEvent, blockId: string, handle: 'top' | 'bottom', block: TimeBlock) => void;
+  onMoveResizeDrag?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMoveResizeEnd?: () => void;
 }
 
-function DailyView({ timeSlots, displayedBlocks, calculateBlockPosition, formatTime, onBlockClick }: DailyViewProps) {
+function DailyView({ 
+  timeSlots, 
+  displayedBlocks, 
+  calculateBlockPosition, 
+  formatTime, 
+  onBlockClick,
+  dragStart,
+  dragCurrent,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onMoveStart,
+  onResizeStart,
+  onMoveResizeDrag,
+  onMoveResizeEnd
+}: DailyViewProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to default view start time on mount
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const scrollPosition = DEFAULT_VIEW_START_HOUR * HOUR_HEIGHT;
+      scrollContainerRef.current.scrollTop = scrollPosition - SCROLL_OFFSET;
+    }
+  }, []);
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      <div className="relative">
+      {/* Scrollable container for both time column and blocks */}
+      <div 
+        ref={scrollContainerRef}
+        style={{ height: `${CONTAINER_HEIGHT}px` }}
+        className="overflow-y-auto"
+      >
         <div className="flex">
-          {/* Time column */}
+          {/* Time column - scrolls with blocks */}
           <div className="w-20 flex-shrink-0 bg-gray-50 border-r border-gray-200">
             {timeSlots.map(hour => (
-              <div key={hour} className="h-20 border-b border-gray-200 px-2 py-1 text-xs text-gray-600">
+              <div key={hour} className="border-b border-gray-200 px-2 py-1 text-xs text-gray-600" style={{ height: `${HOUR_HEIGHT}px` }}>
                 {formatTime(hour)}
               </div>
             ))}
           </div>
 
           {/* Blocks column */}
-          <div className="flex-1 relative">
+          <div 
+            data-time-grid
+            className="flex-1 relative bg-white border-l border-gray-200 select-none"
+            onMouseDown={onDragStart}
+            onMouseMove={(e) => {
+              onDragMove?.(e);
+              onMoveResizeDrag?.(e);
+            }}
+            onMouseUp={(e) => {
+              onDragEnd?.();
+              onMoveResizeEnd?.();
+            }}
+            onMouseLeave={(e) => {
+              onDragEnd?.();
+              onMoveResizeEnd?.();
+            }}
+          >
             {/* Grid lines */}
             {timeSlots.map(hour => (
-              <div key={hour} className="h-20 border-b border-gray-200"></div>
+              <div key={hour} className="border-b border-gray-200" style={{ height: `${HOUR_HEIGHT}px` }}></div>
             ))}
 
             {/* Time blocks */}
@@ -594,35 +903,71 @@ function DailyView({ timeSlots, displayedBlocks, calculateBlockPosition, formatT
               return (
                 <div
                   key={block.id}
-                  onClick={() => onBlockClick(block)}
-                  className={`absolute left-2 right-2 rounded-lg cursor-pointer transition-all hover:shadow-lg ${config.lightColor} ${config.borderColor} border-l-4 p-3 ${block.isCalendarEvent ? 'opacity-80' : ''}`}
+                  className={`absolute left-2 right-2 rounded-lg overflow-hidden ${config.lightColor} ${config.borderColor} border-l-4 ${block.isCalendarEvent ? 'opacity-80' : ''}`}
                   style={{
                     top: `${top}px`,
                     height: `${height}px`,
                     minHeight: '40px'
                   }}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <div className="font-medium text-sm text-gray-900 mb-1 flex items-center gap-2">
-                        {block.isCalendarEvent ? (
-                          <CalendarIcon className="w-3 h-3 text-gray-600 flex-shrink-0" />
-                        ) : (
-                          <Zap className="w-3 h-3 text-gray-600 flex-shrink-0" />
+                  {/* Top resize handle */}
+                  {!block.isCalendarEvent && (
+                    <div
+                      onMouseDown={(e) => onResizeStart?.(e, block.id, 'top', block)}
+                      className="absolute top-0 left-0 right-0 h-1 bg-gray-400 hover:bg-gray-600 cursor-ns-resize"
+                      title="Drag to resize"
+                    />
+                  )}
+
+                  {/* Block content - clickable and draggable */}
+                  <div
+                    onMouseDown={(e) => onMoveStart?.(e, block.id, block)}
+                    onClick={() => onBlockClick(block)}
+                    className={`w-full h-full p-3 cursor-move flex flex-col justify-between ${!block.isCalendarEvent ? 'hover:opacity-80' : ''}`}
+                  >
+                    <div className="flex items-start justify-between gap-2 pointer-events-none">
+                      <div className="flex-1">
+                        <div className="font-medium text-sm text-gray-900 mb-1 flex items-center gap-2">
+                          {block.isCalendarEvent ? (
+                            <CalendarIcon className="w-3 h-3 text-gray-600 flex-shrink-0" />
+                          ) : (
+                            <Zap className="w-3 h-3 text-gray-600 flex-shrink-0" />
+                          )}
+                          <span className="line-clamp-1">{block.title}</span>
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {formatTime(block.startTime)} - {formatTime(block.endTime)}
+                        </div>
+                        {block.description && height > 60 && (
+                          <div className="text-xs text-gray-500 mt-2 line-clamp-2">{block.description}</div>
                         )}
-                        <span className="line-clamp-1">{block.title}</span>
                       </div>
-                      <div className="text-xs text-gray-600">
-                        {formatTime(block.startTime)} - {formatTime(block.endTime)}
-                      </div>
-                      {block.description && height > 60 && (
-                        <div className="text-xs text-gray-500 mt-2 line-clamp-2">{block.description}</div>
-                      )}
                     </div>
                   </div>
+
+                  {/* Bottom resize handle */}
+                  {!block.isCalendarEvent && (
+                    <div
+                      onMouseDown={(e) => onResizeStart?.(e, block.id, 'bottom', block)}
+                      className="absolute bottom-0 left-0 right-0 h-1 bg-gray-400 hover:bg-gray-600 cursor-ns-resize"
+                      title="Drag to resize"
+                    />
+                  )}
                 </div>
               );
             })}
+
+            {/* Drag preview */}
+            {dragStart && dragCurrent && (
+              <div
+                className="absolute left-2 right-2 rounded-lg bg-blue-400 border-2 border-blue-600 opacity-50 pointer-events-none"
+                style={{
+                  top: `${Math.min(dragStart.y, dragCurrent.y)}px`,
+                  height: `${Math.abs(dragCurrent.y - dragStart.y)}px`,
+                  minHeight: '2px'
+                }}
+              ></div>
+            )}
           </div>
         </div>
       </div>
@@ -639,15 +984,52 @@ interface WeeklyViewProps {
   formatTime: (time: number) => string;
   onBlockClick: (block: TimeBlock) => void;
   onDateClick: (date: Date) => void;
+  dragStart?: { hour: number; y: number } | null;
+  dragCurrent?: { hour: number; y: number } | null;
+  draggedDate?: Date | null;
+  onDragStart?: (e: React.MouseEvent<HTMLDivElement>, date: Date) => void;
+  onDragMove?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
+  onMoveStart?: (e: React.MouseEvent, blockId: string, block: TimeBlock) => void;
+  onResizeStart?: (e: React.MouseEvent, blockId: string, handle: 'top' | 'bottom', block: TimeBlock) => void;
+  onMoveResizeDrag?: (e: React.MouseEvent<HTMLDivElement>) => void;
+  onMoveResizeEnd?: () => void;
 }
 
-function WeeklyView({ weekDates, getBlocksForDate, timeSlots, calculateBlockPosition, formatTime, onBlockClick, onDateClick }: WeeklyViewProps) {
+function WeeklyView({ 
+  weekDates, 
+  getBlocksForDate, 
+  timeSlots, 
+  calculateBlockPosition, 
+  formatTime, 
+  onBlockClick, 
+  onDateClick,
+  dragStart,
+  dragCurrent,
+  draggedDate,
+  onDragStart,
+  onDragMove,
+  onDragEnd,
+  onMoveStart,
+  onResizeStart,
+  onMoveResizeDrag,
+  onMoveResizeEnd
+}: WeeklyViewProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // Auto-scroll to default view start time on mount
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      const scrollPosition = DEFAULT_VIEW_START_HOUR * HOUR_HEIGHT;
+      scrollContainerRef.current.scrollTop = scrollPosition - SCROLL_OFFSET;
+    }
+  }, []);
+
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div className="min-w-[1200px]">
         {/* Week header */}
         <div className="flex border-b border-gray-200 bg-gray-50">
@@ -667,67 +1049,124 @@ function WeeklyView({ weekDates, getBlocksForDate, timeSlots, calculateBlockPosi
           })}
         </div>
 
-        {/* Week grid */}
-        <div className="flex relative">
-          {/* Time column */}
-          <div className="w-16 flex-shrink-0 bg-gray-50 border-r border-gray-200">
-            {timeSlots.map(hour => (
-              <div key={hour} className="h-20 border-b border-gray-200 px-1 py-1 text-xs text-gray-600">
-                {formatTime(hour)}
-              </div>
-            ))}
-          </div>
-
-          {/* Days columns */}
-          {weekDates.map((date, dayIndex) => {
-            const blocks = getBlocksForDate(date);
-            const isToday = date.getTime() === today.getTime();
-            
-            return (
-              <div key={dayIndex} className="flex-1 border-l border-gray-200 relative">
-                {/* Grid lines */}
-                {timeSlots.map(hour => (
-                  <div key={hour} className={`h-20 border-b border-gray-200 ${isToday ? 'bg-blue-50/30' : ''}`}></div>
-                ))}
-
-                {/* Time blocks */}
-                <div className="absolute inset-0 pointer-events-none">
-                  {blocks.map(block => {
-                    const { top, height } = calculateBlockPosition(block);
-                    const config = getTagInfo(block.tag);
-                    if (!config) return null;
-                    
-                    return (
-                      <div
-                        key={block.id}
-                        onClick={() => onBlockClick(block)}
-                        className={`absolute left-1 right-1 rounded cursor-pointer transition-all hover:shadow-md ${config.lightColor} ${config.borderColor} border-l-2 p-1.5 pointer-events-auto ${block.isCalendarEvent ? 'opacity-80' : ''}`}
-                        style={{
-                          top: `${top}px`,
-                          height: `${height}px`,
-                          minHeight: '30px'
-                        }}
-                      >
-                        <div className="flex items-start gap-1">
-                          {block.isCalendarEvent ? (
-                            <CalendarIcon className="w-2.5 h-2.5 text-gray-600 flex-shrink-0 mt-0.5" />
-                          ) : (
-                            <Zap className="w-2.5 h-2.5 text-gray-600 flex-shrink-0 mt-0.5" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="text-xs font-medium text-gray-900 line-clamp-1">{block.title}</div>
-                            {height > 40 && (
-                              <div className="text-xs text-gray-600">{formatTime(block.startTime)}</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+        {/* Single scrollable container for time column and blocks */}
+        <div 
+          ref={scrollContainerRef}
+          style={{ height: `${CONTAINER_HEIGHT}px` }}
+          className="overflow-y-auto"
+        >
+          <div className="flex">
+            {/* Time column - scrolls with blocks */}
+            <div className="w-16 flex-shrink-0 bg-gray-50 border-r border-gray-200">
+              {timeSlots.map(hour => (
+                <div key={hour} className="border-b border-gray-200 px-1 py-1 text-xs text-gray-600" style={{ height: `${HOUR_HEIGHT}px` }}>
+                  {formatTime(hour)}
                 </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+
+            {/* Days columns */}
+            <div className="flex flex-1">
+              {weekDates.map((date, dayIndex) => {
+                const blocks = getBlocksForDate(date);
+                const isToday = date.getTime() === today.getTime();
+                
+                return (
+                  <div 
+                    key={dayIndex} 
+                    data-time-grid
+                    className="flex-1 border-l border-gray-200 relative select-none"
+                    onMouseDown={(e) => onDragStart?.(e, date)}
+                    onMouseMove={(e) => {
+                      onDragMove?.(e);
+                      onMoveResizeDrag?.(e);
+                    }}
+                    onMouseUp={(e) => {
+                      onDragEnd?.();
+                      onMoveResizeEnd?.();
+                    }}
+                    onMouseLeave={(e) => {
+                      onDragEnd?.();
+                      onMoveResizeEnd?.();
+                    }}
+                  >
+                    {/* Grid lines */}
+                    {timeSlots.map(hour => (
+                      <div key={hour} className={`border-b border-gray-200 ${isToday ? 'bg-blue-50/30' : ''}`} style={{ height: `${HOUR_HEIGHT}px` }}></div>
+                    ))}
+
+                    {/* Time blocks */}
+                    {blocks.map(block => {
+                      const { top, height } = calculateBlockPosition(block);
+                      const config = getTagInfo(block.tag);
+                      if (!config) return null;
+                      
+                      return (
+                        <div
+                          key={block.id}
+                          className={`absolute left-1 right-1 rounded overflow-hidden ${config.lightColor} ${config.borderColor} border-l-2 ${block.isCalendarEvent ? 'opacity-80' : ''}`}
+                          style={{
+                            top: `${top}px`,
+                            height: `${height}px`,
+                            minHeight: '30px'
+                          }}
+                        >
+                          {/* Top resize handle */}
+                          {!block.isCalendarEvent && (
+                            <div
+                              onMouseDown={(e) => onResizeStart?.(e, block.id, 'top', block)}
+                              className="absolute top-0 left-0 right-0 h-0.5 bg-gray-400 hover:bg-gray-600 cursor-ns-resize"
+                            />
+                          )}
+
+                          {/* Block content - clickable and draggable */}
+                          <div
+                            onMouseDown={(e) => onMoveStart?.(e, block.id, block)}
+                            onClick={() => onBlockClick(block)}
+                            className={`w-full h-full p-1.5 cursor-move flex flex-col justify-between ${!block.isCalendarEvent ? 'hover:opacity-80' : ''}`}
+                          >
+                            <div className="flex items-start gap-1 pointer-events-none">
+                              {block.isCalendarEvent ? (
+                                <CalendarIcon className="w-2.5 h-2.5 text-gray-600 flex-shrink-0 mt-0.5" />
+                              ) : (
+                                <Zap className="w-2.5 h-2.5 text-gray-600 flex-shrink-0 mt-0.5" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium text-gray-900 line-clamp-1">{block.title}</div>
+                                {height > 40 && (
+                                  <div className="text-xs text-gray-600">{formatTime(block.startTime)}</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Bottom resize handle */}
+                          {!block.isCalendarEvent && (
+                            <div
+                              onMouseDown={(e) => onResizeStart?.(e, block.id, 'bottom', block)}
+                              className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-400 hover:bg-gray-600 cursor-ns-resize"
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Drag preview for weekly view */}
+                    {dragStart && dragCurrent && draggedDate?.getTime() === date.getTime() && (
+                      <div
+                        className="absolute left-1 right-1 rounded bg-blue-400 border-2 border-blue-600 opacity-50 pointer-events-none"
+                        style={{
+                          top: `${Math.min(dragStart.y, dragCurrent.y)}px`,
+                          height: `${Math.abs(dragCurrent.y - dragStart.y)}px`,
+                          minHeight: '2px'
+                        }}
+                      ></div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -739,13 +1178,40 @@ interface AddBlockModalProps {
   selectedDate: Date;
   onClose: () => void;
   onAdd: (block: Omit<TimeBlock, 'id' | 'date'>) => void;
+  dragStart?: { hour: number; y: number } | null;
+  dragCurrent?: { hour: number; y: number } | null;
 }
 
-function AddBlockModal({ selectedDate, onClose, onAdd }: AddBlockModalProps) {
+function AddBlockModal({ selectedDate, onClose, onAdd, dragStart, dragCurrent }: AddBlockModalProps) {
+  // Helper to convert decimal hours to HH:MM format
+  const decimalToTimeString = (decimal: number): string => {
+    const hours = Math.floor(decimal);
+    const minutes = Math.round((decimal - hours) * 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  // Determine initial times: use drag times if available, otherwise defaults
+  const getInitialStartTime = (): string => {
+    if (dragStart && dragCurrent) {
+      return decimalToTimeString(Math.min(dragStart.hour, dragCurrent.hour));
+    }
+    return '09:00';
+  };
+
+  const getInitialEndTime = (): string => {
+    if (dragStart && dragCurrent) {
+      const startHour = Math.min(dragStart.hour, dragCurrent.hour);
+      const endHour = Math.max(dragStart.hour, dragCurrent.hour);
+      // Ensure at least 15 minutes (0.25 hours)
+      return decimalToTimeString(Math.max(endHour, startHour + 0.25));
+    }
+    return '10:00';
+  };
+
   const [title, setTitle] = useState('');
   const [tag, setTag] = useState<EventTag>('personal');
-  const [startTime, setStartTime] = useState('09:00');
-  const [endTime, setEndTime] = useState('10:00');
+  const [startTime, setStartTime] = useState(getInitialStartTime());
+  const [endTime, setEndTime] = useState(getInitialEndTime());
   const [description, setDescription] = useState('');
 
   const timeToDecimal = (timeStr: string): number => {
@@ -992,3 +1458,109 @@ function PresetModal({ selectedDate, presets, onClose, onSave, onLoad }: PresetM
     </div>
   );
 }
+
+// Copy Block Modal Component
+interface CopyBlockModalProps {
+  block: TimeBlock;
+  currentDate: Date;
+  onClose: () => void;
+  onCopy: (targetDate: Date) => void;
+}
+
+function CopyBlockModal({ block, currentDate, onClose, onCopy }: CopyBlockModalProps) {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date(currentDate));
+  const [offsetDays, setOffsetDays] = useState(1);
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const date = new Date(e.target.value);
+    setSelectedDate(date);
+  };
+
+  const handleQuickSelect = (days: number) => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(newDate.getDate() + days);
+    setSelectedDate(newDate);
+  };
+
+  const formatTimeLocal = (time: number): string => {
+    const hours = Math.floor(time);
+    const minutes = Math.round((time - hours) * 60);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">Copy Time Block</h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mt-2">Copy "{block.title}" to another day</p>
+        </div>
+
+        <div className="p-6 space-y-4">
+          {/* Quick select buttons */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Quick Select</label>
+            <div className="grid grid-cols-4 gap-2">
+              {[1, 2, 3, 7].map(days => (
+                <button
+                  key={days}
+                  onClick={() => handleQuickSelect(days)}
+                  className="px-3 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  {days === 1 ? 'Tomorrow' : days === 7 ? 'Next Week' : `+${days}d`}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date picker */}
+          <div>
+            <label htmlFor="copyDate" className="block text-sm font-medium text-gray-700 mb-1">
+              Select Date
+            </label>
+            <input
+              type="date"
+              id="copyDate"
+              value={selectedDate.toISOString().split('T')[0]}
+              onChange={handleDateChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Block details preview */}
+          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-xs text-gray-600 mb-1">Block Details</div>
+            <div className="text-sm font-medium text-gray-900">{block.title}</div>
+            <div className="text-xs text-gray-600 mt-1">
+              Same time: {formatTimeLocal(block.startTime)} - {formatTimeLocal(block.endTime)}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onCopy(selectedDate)}
+              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Copy Block
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+

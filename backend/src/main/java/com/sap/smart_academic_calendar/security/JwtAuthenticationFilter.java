@@ -80,13 +80,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Set authentication context if not already set
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             Claims claims = jwtService.parseClaims(token);
-            String username = claims.get("username", String.class);
-            if (username == null || username.isBlank()) {
-                username = claims.getSubject();
-            }
+            // Use user ID from JWT subject claim as the principal
+            // This allows controllers to extract user ID via authentication.getName()
+            String userId = claims.getSubject();
 
             UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(username, null, List.of());
+                new UsernamePasswordAuthenticationToken(userId, null, List.of());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }

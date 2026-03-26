@@ -324,7 +324,11 @@ export function TimelinePage({ customEvents, courseColors, isWhatIfMode, whatIfC
                         const minutesFromHourStart = (event.startTime! - Math.floor(event.startTime!)) * 60;
                         const topOffset = (minutesFromHourStart / 60) * 80; // Convert minutes to pixels
                         const isConflicting = conflictingEventIds.has(event.id);
+                        const isAssignmentTask = event.source === 'assignment' || event.type === 'task';
                         const associatedProject = event.projectId ? getProjectById(event.projectId) : undefined;
+                        const destination = isAssignmentTask && event.courseId
+                          ? `/course/${event.courseId}?tab=assignments`
+                          : `/event/${event.id}`;
                         
                         // Calculate position based on column
                         const widthPercent = 100 / numColumns;
@@ -333,7 +337,7 @@ export function TimelinePage({ customEvents, courseColors, isWhatIfMode, whatIfC
                         return (
                           <Link
                             key={event.id}
-                            to={`/event/${event.id}`}
+                            to={destination}
                             className={`absolute rounded-lg border-l-4 px-3 py-2 cursor-pointer hover:shadow-md transition-shadow ${
                               isConflicting ? 'bg-red-50 border-red-500' : event.color
                             }`}
@@ -358,7 +362,9 @@ export function TimelinePage({ customEvents, courseColors, isWhatIfMode, whatIfC
                               </div>
                             )}
                             <div className={`text-sm ${isConflicting ? 'text-red-600' : 'opacity-80'}`}>
-                              {formatTime(event.startTime!)} - {formatTime(event.endTime!)}
+                              {isAssignmentTask
+                                ? `Due ${formatTime(event.startTime!)}`
+                                : `${formatTime(event.startTime!)} - ${formatTime(event.endTime!)}`}
                             </div>
                             {event.location && (
                               <div className={`text-sm truncate ${isConflicting ? 'text-red-600' : 'opacity-70'}`}>{event.location}</div>

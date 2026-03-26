@@ -158,6 +158,7 @@
 | #20 | Can users create and enroll in a custom class | Manual | Pass
 | #40 | Custom events are saved across sessions (after complete log out & log in) | Manual | Pass
 
+## Iteration 3
 ## Sprint #7
 | Issue # | Description | Manual/Auto Testing | Result |
 |---------|-------------|-------------------|--------|
@@ -183,26 +184,83 @@
 | #23 | Clicking on an event from weekly view navigates to event page | Manual | Pass
 | #23 | Clicking on the background of weekly view navigates to daily view | Manual | Pass
 | #23 | Events are ordered on weekly/monthly calendar by start date | Manual | Pass
-| #US-08 | Does the CS course map page load with all course bubbles in a grid layout | Manual | |
-| #US-08 | Are prerequisite arrows drawn correctly between dependent courses | Manual | |
-| #US-08 | Does clicking a pool bubble open the requirement sheet with eligible courses | Manual | |
-| #US-08 | Can a course be enrolled from the requirement sheet into the current semester | Manual | |
-| #US-08 | Does the schedule modal appear when enrolling a course without a valid schedule | Manual | |
-| #US-08 | Can a course be unenrolled from the course detail panel | Manual | |
-| #US-08 | Does unenrolling a course clear its schedule and remove it from the calendar | Manual | |
-| #US-08 | Does advancing the semester mark current enrollments as COMPLETED | Manual | |
-| #US-08 | Does rolling back the semester reset COMPLETED enrollments to ENROLLED | Manual | |
-| #US-08 | Can the user advance through all 11 semesters without errors | Manual | |
-| #US-08 | Does advancing at the final semester stay on the last semester without crashing | Manual | |
-| #US-08 | Does rolling back from the last semester correctly return to the previous state | Manual | |
-| #US-08 | Do credit counters (BGP, Major, Additional) update correctly when courses are enrolled | Manual | |
-| #US-08 | Do all credit counters reach their targets when the entire CS course map is completed | Manual | |
-| #US-08 | Does the Lab Science Sequence restrict to one option after the first course is chosen | Manual | |
-| #US-08 | Does the World Languages sequence lock to one language after the first course is chosen | Manual | |
-| #US-08 | Are MDC pool bubbles matched to the correct semester column visually | Manual | |
-| #US-08 | Does the course detail panel show course info, prerequisites, and enrollment status | Manual | |
-| #US-08 | Are semester headers highlighted correctly for past, current, and future semesters | Manual | |
-| #US-08 | Are enrolled courses displayed on the calendar and timeline after enrollment | Manual | |
-| #US-08 | Does the CS 3000-level elective pool show only CS 3000-level courses | Manual | |
-| #US-08 | Does the CS 4000-level elective pool show only CS 4000-level courses | Manual | |
-| #US-08 | Are all three CS 4000-level elective bubbles independently enrollable | Manual | |
+| #US-08 | Does the CS course map page load with all course bubbles in a grid layout | Manual | Pass
+| #US-08 | Are prerequisite arrows drawn correctly between dependent courses | Manual | Pass
+| #US-08 | Does clicking a pool bubble open the requirement sheet with eligible courses | Manual | Pass
+| #US-08 | Can a course be enrolled from the requirement sheet into the current semester | Manual | Pass
+| #US-08 | Does the schedule modal appear when enrolling a course without a valid schedule | Manual | Pass
+| #US-08 | Can a course be unenrolled from the course detail panel | Manual | Pass
+| #US-08 | Does unenrolling a course clear its schedule and remove it from the calendar | Manual | Pass
+| #US-08 | Does advancing the semester mark current enrollments as COMPLETED | Manual | Pass
+| #US-08 | Does rolling back the semester reset COMPLETED enrollments to ENROLLED | Manual | Pass
+| #US-08 | Can the user advance through all 11 semesters without errors | Manual | Pass
+| #US-08 | Does advancing at the final semester stay on the last semester without crashing | Manual | Pass
+| #US-08 | Does rolling back from the last semester correctly return to the previous state | Manual | Pass
+| #US-08 | Do credit counters (BGP, Major, Additional) update correctly when courses are enrolled | Manual | Pass
+| #US-08 | Do all credit counters reach their targets when the entire CS course map is completed | Manual | Pass
+| #US-08 | Does the Lab Science Sequence restrict to one option after the first course is chosen | Manual | Pass
+| #US-08 | Does the World Languages sequence lock to one language after the first course is chosen | Manual | Pass
+| #US-08 | Are MDC pool bubbles matched to the correct semester column visually | Manual | Pass
+| #US-08 | Does the course detail panel show course info, prerequisites, and enrollment status | Manual | Pass
+| #US-08 | Are semester headers highlighted correctly for past, current, and future semesters | Manual | Pass
+| #US-08 | Are enrolled courses displayed on the calendar and timeline after enrollment | Manual | Pass
+| #US-08 | Does the CS 3000-level elective pool show only CS 3000-level courses | Manual | Pass
+| #US-08 | Does the CS 4000-level elective pool show only CS 4000-level courses | Manual | Pass
+| #US-08 | Are all three CS 4000-level elective bubbles independently enrollable | Manual | Pass
+
+## Sprint #8
+| Issue # | Description | Manual/Auto Testing | Result |
+|---------|-------------|-------------------|--------|
+| #11 | Verify that the monthly summary card displays correct total budget and updates with new transactions | Manual | Pass
+| #11 | Verify that total spending is calculated correctly from transactions | Manual | Pass
+| #11 | Verify that remaining balance (budget - spending) is accurate | Manual | Pass
+| #11 | Verify that navigating between months updates displayed data correctly | Manual | Pass
+| #11 | Verify that budget data is correctly stored and retrieved from database | Manual | Pass
+| #12 | Verify that user can be added with valid inputs and will be rejected with invalid inputs | Manual | Pass
+| #12 | Verify that newly added transactions appear in the transaction list with the correct details | Manual | Pass
+| #12 | Verify that predefined categories are selectable, editable, and deletable | Manual | Pass
+| #12 | Verify that charts and breakdowns are updated dynamically when transactions are added | Manual | Pass
+| #45 | Assignments tab content is saved across refresh | Manual | Pass
+| #45 | Assignments tab content is saved across sessions | Manual | Pass
+| #45 | Assignments created through 'add assignment' modal are saved correctly | Manual | Pass
+| #45 | Assignments are automatically added to calendar | Manual | Pass
+| #45 | Assignments are automatically added to to-do list | Manual | Pass
+| #45 | Assignment status (todo/in progress/completed) is editable and saved correctly | Manual | Pass
+| #21 | Notes and files tab content is saved across refresh | Manual | Pass
+| #21 | Notes and files tab content is saved across sessions | Manual | Pass
+| #14 | Can a user drag to create a new time block on the calendar | Manual | Pass
+| #14 | Does a created time block persist in localStorage after page refresh | Manual | Pass
+| #14 | Can a user delete a time block with confirmation dialog | Manual | Pass
+| #14 | Can a user move and resize existing time blocks | Manual | Pass
+| #14 | Can a user toggle between daily and weekly view modes | Manual | Pass
+| #14 | Does calendar event visibility toggle show/hide calendar events on the view | Manual | Pass
+| #14 | Can a user save and load day presets for days of the week | Manual | Pass
+| #14 | Can a user copy a time block to another date | Manual | Pass
+| #14 | Do day navigation buttons (previous/next/today) work correctly | Manual | Pass
+| #47 | Railway 3-service architecture (PostgreSQL, Backend, Frontend) deploys and starts successfully | Manual | Pass
+| #47 | Backend Docker image builds with multi-stage Dockerfile and starts on Railway | Manual | Pass
+| #47 | Frontend Docker image builds and serves via react-router-serve on port 3000 | Manual | Pass
+| #47 | Railway PostgreSQL database is provisioned and accessible by the backend | Manual | Pass
+| #47 | Backend allows cross-origin requests from the Railway frontend domain | Manual | Pass
+| #47 | OPTIONS preflight requests return correct CORS headers and 200 status | Manual | Pass
+| #47 | CORS allowed origins are configurable via environment variable (CORS_ALLOWED_ORIGINS) | Manual | Pass
+| #47 | HttpOnly JWT cookies use SameSite=None and Secure=true in production for cross-origin | Manual | Pass
+| #47 | Access token and refresh token cookies are set correctly after login on Railway | Manual | Pass
+| #47 | User registration succeeds on production with auto-verified email | Manual | Pass
+| #47 | User login succeeds on production and returns valid JWT tokens in cookies | Manual | Pass
+| #47 | Protected API endpoints reject unauthenticated requests with 401 on production | Manual | Pass
+| #47 | Stale JWT tokens (user no longer in DB) return 401 instead of 500 | Manual | Pass
+| #47 | Frontend API calls use VITE_API_URL environment variable instead of hardcoded localhost | Manual | Pass
+| #47 | All 16+ frontend service files correctly resolve backend URL from environment variable | Manual | Pass
+| #47 | Database seeding runs on production startup and populates courses, programs, and semesters | Manual | Pass
+| #47 | Test data seeders (UserSeeder, EventSeeder) do not run in production profile | Manual | Pass
+| #47 | Course map page loads without 500 errors for authenticated users | Manual | Pass
+| #47 | GET /api/semesters/current returns user semester data or proper error response | Manual | Pass
+| #47 | GET /api/enrollments returns user enrollments or proper error response | Manual | Pass
+| #47 | GET /api/programs/{id} returns full program data with requirement hierarchy | Manual | Pass
+| #47 | SemesterController logs and returns JSON error body instead of raw 500 on failure | Manual | Pass
+| #47 | EnrollmentController logs and returns JSON error body instead of raw 500 on failure | Manual | Pass
+| #47 | Enrollment read methods use @Transactional(readOnly) to prevent lazy loading errors | Manual | Pass
+| #47 | application-prod.properties correctly configures PostgreSQL, CORS, JWT, and Flyway settings | Manual | Pass
+| #47 | Spring profile is set to prod via SPRING_PROFILES_ACTIVE on Railway | Manual | Pass
+| #47 | Flyway baseline-on-migrate is enabled for production database initialization | Manual | Pass

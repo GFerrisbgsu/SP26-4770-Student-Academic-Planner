@@ -552,6 +552,58 @@ export function Calendar({ customEvents, courseColors, whatIfCourseIds, onAddEve
                         {/* Render standalone events */}
                         {standaloneEvents.slice(0, maxDisplayItems - displayedCount).map(event => {
                           const tagInfo = getTagInfo(event.tag);
+                          const isTask = event.type === 'task';
+                          const assignmentDestination = event.courseId
+                            ? `/course/${event.courseId}?tab=assignments`
+                            : null;
+
+                          if (isTask) {
+                            if (assignmentDestination) {
+                              return (
+                                <Link
+                                  key={event.id}
+                                  to={assignmentDestination}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className={`block text-xs p-2 rounded-lg border-l-4 hover:shadow-md transition-all ${event.color} bg-opacity-20`}
+                                >
+                                  <div className="flex items-center gap-1 mb-1">
+                                    <span className="text-[10px] px-1 py-0.5 rounded bg-blue-50 text-blue-700">
+                                      Task
+                                    </span>
+                                    <span className={`text-[10px] px-1 py-0.5 rounded ${tagInfo?.lightColor || ''} ${tagInfo?.textColor || ''}`}>
+                                      {tagInfo?.label || event.tag}
+                                    </span>
+                                  </div>
+                                  <div className="font-semibold truncate">{event.title}</div>
+                                  <div className="mt-1 text-gray-600">
+                                    {event.time}
+                                  </div>
+                                </Link>
+                              );
+                            }
+
+                            return (
+                              <div
+                                key={event.id}
+                                onClick={(e) => e.stopPropagation()}
+                                className={`block text-xs p-2 rounded-lg border-l-4 transition-all ${event.color} bg-opacity-20`}
+                              >
+                                <div className="flex items-center gap-1 mb-1">
+                                  <span className="text-[10px] px-1 py-0.5 rounded bg-blue-50 text-blue-700">
+                                    Task
+                                  </span>
+                                  <span className={`text-[10px] px-1 py-0.5 rounded ${tagInfo?.lightColor || ''} ${tagInfo?.textColor || ''}`}>
+                                    {tagInfo?.label || event.tag}
+                                  </span>
+                                </div>
+                                <div className="font-semibold truncate">{event.title}</div>
+                                <div className="mt-1 text-gray-600">
+                                  {event.time}
+                                </div>
+                              </div>
+                            );
+                          }
+
                           return (
                             <Link
                               key={event.id}

@@ -149,8 +149,8 @@ public class EnrollmentController {
 
     private Long getAuthenticatedUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-        User user = userRepository.findByUsername(username)
+        Long userId = Long.parseLong(auth.getName());
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return user.getId();
     }

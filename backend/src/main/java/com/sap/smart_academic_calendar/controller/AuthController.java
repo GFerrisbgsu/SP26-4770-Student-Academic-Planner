@@ -39,6 +39,7 @@ import com.sap.smart_academic_calendar.service.AuthService;
 import com.sap.smart_academic_calendar.service.PasskeyAuthenticationService;
 import com.sap.smart_academic_calendar.service.PasskeyService;
 import com.sap.smart_academic_calendar.service.UserService;
+import com.sap.smart_academic_calendar.service.seeding.CategorySeeder;
 import com.sap.smart_academic_calendar.util.CookieUtils;
 
 import jakarta.servlet.http.Cookie;
@@ -64,6 +65,7 @@ public class AuthController {
     private final CookieUtils cookieUtils;
     private final PasskeyService passkeyService;
     private final PasskeyAuthenticationService passkeyAuthenticationService;
+    private final CategorySeeder categorySeeder;
 
     public AuthController(
             AuthService authService,
@@ -71,13 +73,15 @@ public class AuthController {
             UserRepository userRepository,
             CookieUtils cookieUtils,
             PasskeyService passkeyService,
-            PasskeyAuthenticationService passkeyAuthenticationService) {
+            PasskeyAuthenticationService passkeyAuthenticationService,
+            CategorySeeder categorySeeder) {
         this.authService = authService;
         this.userService = userService;
         this.userRepository = userRepository;
         this.cookieUtils = cookieUtils;
         this.passkeyService = passkeyService;
         this.passkeyAuthenticationService = passkeyAuthenticationService;
+        this.categorySeeder = categorySeeder;
     }
 
     // ========== Registration & Email Verification ==========
@@ -173,8 +177,10 @@ public class AuthController {
     public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            userService.changePassword(username, request.getCurrentPassword(), request.getNewPassword());
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            userService.changePassword(user.getUsername(), request.getCurrentPassword(), request.getNewPassword());
             return ResponseEntity.ok("Password changed successfully.");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -201,6 +207,9 @@ public class AuthController {
 
             User user = userRepository.findById(loginResponse.getUserId())
                     .orElseThrow(() -> new RuntimeException("User not found"));
+
+            // Seed default budget categories for user if they don't have any
+            categorySeeder.seedCategoriesForUser(user.getId());
 
             String accessToken = authService.generateAccessToken(user);
             String refreshToken = authService.generateRefreshToken(user, request.isRememberMe());
@@ -289,9 +298,9 @@ public class AuthController {
     public ResponseEntity<UserDTO> getCurrentUser() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
+            Long userId = Long.parseLong(authentication.getName());
 
-            User user = userRepository.findByUsername(username)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             UserDTO userDTO = new UserDTO(
@@ -319,8 +328,8 @@ public class AuthController {
             @RequestBody PasskeyRegistrationStartRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            User user = userRepository.findByUsername(username)
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             PasskeyRegistrationStartResponse response = passkeyService.startRegistration(user.getId(), request);
@@ -341,8 +350,8 @@ public class AuthController {
             @RequestBody PasskeyRegistrationCompleteRequest request) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            User user = userRepository.findByUsername(username)
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             passkeyService.completeRegistration(user.getId(), request);
@@ -409,8 +418,8 @@ public class AuthController {
     public ResponseEntity<List<PasskeyDTO>> getUserPasskeys() {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            User user = userRepository.findByUsername(username)
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             List<PasskeyDTO> passkeys = passkeyService.getUserPasskeys(user.getId());
@@ -429,8 +438,8 @@ public class AuthController {
     public ResponseEntity<Void> deletePasskey(@PathVariable("id") Long passkeyId) {
         try {
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            String username = authentication.getName();
-            User user = userRepository.findByUsername(username)
+            Long userId = Long.parseLong(authentication.getName());
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             passkeyService.deletePasskey(passkeyId, user.getId());

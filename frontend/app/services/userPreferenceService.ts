@@ -11,20 +11,29 @@ export interface UserPreference {
 }
 
 export async function getUserPreference(userId: number, preferenceKey: string): Promise<string | null> {
-  const res = await fetch(`${BASE_URL}/user/${userId}/key/${encodeURIComponent(preferenceKey)}`, {
-    credentials: 'include',
-  });
+  try {
+    const res = await fetch(`${BASE_URL}/user/${userId}/key/${encodeURIComponent(preferenceKey)}`, {
+      credentials: 'include',
+    });
 
-  if (res.status === 404) {
+    if (res.status === 404) {
+      return null;
+    }
+
+    if (!res.ok) {
+      // Silently return null on auth failures (401) or other errors to prevent console spam
+      // This can happen when session is expired but localStorage still has cached user data
+      console.debug(`user preference fetch failed with status ${res.status}`);
+      return null;
+    }
+
+    const preference: UserPreference = await res.json();
+    return preference.preferenceValue ?? null;
+  } catch (error) {
+    // Network errors or parsing errors - return null as fallback
+    console.debug('Error fetching user preference:', error);
     return null;
   }
-
-  if (!res.ok) {
-    throw new Error('Failed to fetch user preference');
-  }
-
-  const preference: UserPreference = await res.json();
-  return preference.preferenceValue ?? null;
 }
 
 export async function upsertUserPreference(

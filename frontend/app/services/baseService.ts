@@ -24,6 +24,7 @@
  */
 
 import { enqueueRequest } from '~/utils/network/requestQueue';
+import { apiFetch } from '~/services/apiClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -56,7 +57,8 @@ export abstract class BaseService<T, CreateDTO = Partial<T>, UpdateDTO = Partial
   }
 
   /**
-   * Make HTTP request with error handling
+   * Make HTTP request with error handling and automatic token refresh
+   * Uses apiFetch which auto-retries on 401 by refreshing token
    */
   protected async request<R>(
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
@@ -70,7 +72,8 @@ export abstract class BaseService<T, CreateDTO = Partial<T>, UpdateDTO = Partial
       method,
       headers: {
         'Content-Type': 'application/json'
-      }
+      },
+      credentials: 'include' // Include cookies for auth
     };
 
     if (body && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
@@ -78,7 +81,8 @@ export abstract class BaseService<T, CreateDTO = Partial<T>, UpdateDTO = Partial
     }
 
     try {
-      const response = await fetch(url, options);
+      // Use apiFetch instead of fetch for automatic 401 retry with token refresh
+      const response = await apiFetch(url, options);
 
       if (!response.ok) {
         const errorText = await response.text();

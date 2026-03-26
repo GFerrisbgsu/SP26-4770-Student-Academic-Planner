@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Resizable } from 're-resizable';
-import { Circle, CheckCircle2, Plus, Trash2, FolderOpen, ChevronDown, ChevronRight, Info, MapPin, FileText, Edit2, FolderPlus, GripVertical } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
+import { Resizable } from 're-resizable';
+import { Circle, CheckCircle2, Plus, Trash2, FolderOpen, ChevronDown, ChevronRight, Info, MapPin, FileText, Edit2, FolderPlus, GripVertical } from 'lucide-react';
 import {
   DndContext,
   PointerSensor,
@@ -35,6 +35,8 @@ import type { Project, CreateProjectRequest } from '~/services/projectService';
 import { getUserTodoLists, createTodoList, updateTodoList, deleteTodoList } from '~/services/todoListService';
 import type { TodoList, CreateTodoListRequest } from '~/services/todoListService';
 import { getUserPreference, upsertUserPreference } from '~/services/userPreferenceService';
+import { deleteAssignment, updateAssignment } from '~/services/assignmentService';
+import { notifyAssignmentsChanged } from '~/utils/assignmentSync';
 import { Checkbox } from '~/components/ui/checkbox';
 import {
   AlertDialog,
@@ -430,8 +432,12 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
   };
 
   // Check if event is from backend (has numeric id)
-  const isBackendEvent = (eventId: string): boolean => {
-    return /^\d+$/.test(eventId);
+  const isAssignmentTask = (event: CalendarEvent): boolean => {
+    return event.source === 'assignment' && typeof event.assignmentId === 'number';
+  };
+
+  const isBackendEvent = (event: CalendarEvent): boolean => {
+    return !isAssignmentTask(event) && /^\d+$/.test(String(event.id));
   };
 
   // Get to-do list info by ID
@@ -473,7 +479,18 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
   const handleDeleteConfirm = async () => {
     if (!eventToDelete) return;
 
-    if (isBackendEvent(eventToDelete.id)) {
+    if (isAssignmentTask(eventToDelete)) {
+      try {
+        await deleteAssignment(eventToDelete.assignmentId!);
+        notifyAssignmentsChanged({
+          assignmentId: eventToDelete.assignmentId,
+          courseId: eventToDelete.courseId,
+        });
+        handleEventUpdate();
+      } catch (error) {
+        console.error('Error deleting assignment:', error);
+      }
+    } else if (isBackendEvent(eventToDelete)) {
       // Backend event - call delete API
       try {
         const response = await fetch(`${API_BASE_URL}/events/${eventToDelete.id}`, {
@@ -508,7 +525,20 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
     // Convert indeterminate to boolean
     const isChecked = newCheckedState === true;
     
-    if (isBackendEvent(event.id)) {
+    if (isAssignmentTask(event)) {
+      try {
+        await updateAssignment(event.assignmentId!, {
+          status: isChecked ? 'completed' : 'todo',
+        });
+        notifyAssignmentsChanged({
+          assignmentId: event.assignmentId,
+          courseId: event.courseId,
+        });
+        handleEventUpdate();
+      } catch (error) {
+        console.error(`Error marking assignment as ${isChecked ? 'completed' : 'uncompleted'}:`, error);
+      }
+    } else if (isBackendEvent(event)) {
       // Backend event - call appropriate API
       try {
         const endpoint = isChecked ? 'complete' : 'uncomplete';
@@ -562,7 +592,8 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
 
   // Handle adding event with auto-update
   const handleAddEventWithUpdate = async (event: Omit<CalendarEvent, 'id'>) => {
-    const success = await onAddEvent(event);
+    const result = await onAddEvent(event);
+    const success = typeof result === 'boolean' ? result : result.success;
     if (success && onEventUpdate) {
       onEventUpdate(); // Trigger parent to refresh
     }
@@ -602,6 +633,14 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
 
   // Get course color from event color
   const getEventCourseInfo = (event: CalendarEvent): { courseCode: string; courseColor: string } => {
+    // Prefer explicit course linkage when available (assignment tasks include courseId).
+    if (event.courseId) {
+      const linkedCourse = enrolledCourses.find(c => c.id === event.courseId);
+      if (linkedCourse) {
+        return { courseCode: linkedCourse.code, courseColor: linkedCourse.color };
+      }
+    }
+
     // Try to extract course code from title (e.g., "CS 101 - Assignment")
     const match = event.title.match(/^([A-Z]+\s+\d+)/);
     if (match) {
@@ -629,7 +668,7 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
 
   // Filter and sort events - only show event type for the selected list
   const allTaskEvents = events.filter(event => {
-    return event.type === 'event' && 
+    return (event.type === 'event' || event.type === 'task') && 
       (selectedListId === null || event.todoListId === selectedListId);
   });
   
@@ -1487,13 +1526,15 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
                                 {event.date ? `Due: ${formatDueDate(event.date)} at ${event.time}` : 'No due date'}
                               </p>
                             </div>
-                            <button
-                              onClick={() => handleEditEvent(event)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
-                              aria-label="Edit task"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
+                            {!isAssignmentTask(event) && (
+                              <button
+                                onClick={() => handleEditEvent(event)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
+                                aria-label="Edit task"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDeleteClick(event)}
                               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
@@ -1605,13 +1646,15 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
                                 {event.date ? `Due: ${formatDueDate(event.date)} at ${event.time}` : 'No due date'}
                               </p>
                             </div>
-                            <button
-                              onClick={() => handleEditEvent(event)}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
-                              aria-label="Edit task"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
+                            {!isAssignmentTask(event) && (
+                              <button
+                                onClick={() => handleEditEvent(event)}
+                                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
+                                aria-label="Edit task"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleDeleteClick(event)}
                               className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
@@ -1700,13 +1743,15 @@ export function ToDoSidebar({ events, onRemoveEvent, onAddEvent, isInline = fals
                           {event.date ? `Due: ${formatDueDate(event.date)} at ${event.time}` : 'No due date'}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleEditEvent(event)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
-                        aria-label="Edit task"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      {!isAssignmentTask(event) && (
+                        <button
+                          onClick={() => handleEditEvent(event)}
+                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors flex-shrink-0"
+                          aria-label="Edit task"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDeleteClick(event)}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"

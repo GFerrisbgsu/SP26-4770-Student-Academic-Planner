@@ -4,10 +4,12 @@ import { TimelinePage } from '~/components/TimelinePage';
 import { getEnrolledCourses } from '~/services/courseService';
 import type { Course } from '~/services/courseService';
 import { getUserEvents } from '~/services/eventService';
+import { getAssignmentsForCourses } from '~/services/assignmentService';
 import { userService } from '~/services/userService';
 import type { CalendarEvent } from '~/utils/generateEvents';
 import { getUserProjects } from '~/services/projectService';
 import type { Project } from '~/services/projectService';
+import { mapAssignmentsToCalendarTasks } from '~/utils/assignmentTasks';
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -76,6 +78,8 @@ export default function Timeline() {
           })
         ]);
 
+        const assignments = await getAssignmentsForCourses(courses.map((course) => course.id));
+
         setEnrolledCourses(courses);
         setProjects(userProjects);
         
@@ -88,7 +92,8 @@ export default function Timeline() {
 
         // Convert backend events to CalendarEvent format
         const convertedEvents = events.map(convertBackendEventToCalendarEvent);
-        setBackendEvents(convertedEvents);
+        const assignmentTasks = mapAssignmentsToCalendarTasks(assignments);
+        setBackendEvents([...convertedEvents, ...assignmentTasks]);
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {

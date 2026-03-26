@@ -4,12 +4,15 @@ import { CalendarView } from '~/components/CalendarView';
 import { getEnrolledCourses, getAllCourses } from '~/services/courseService';
 import type { Course } from '~/services/courseService';
 import { getUserEvents } from '~/services/eventService';
+import { getAssignmentsForCourses } from '~/services/assignmentService';
 import { useAuth } from '~/context/AuthContext';
 import type { CalendarEvent } from '~/utils/generateEvents';
 import { addCustomTag, getAllTagConfigs } from '~/utils/tagUtils';
+import { mapAssignmentsToCalendarTasks } from '~/utils/assignmentTasks';
+import { subscribeAssignmentsChanged } from '~/utils/assignmentSync';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const fallbackTagColors = ['blue', 'green', 'orange', 'pink', 'indigo', 'emerald', 'amber', 'rose'];
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 function getFallbackTagColor(tagKey: string): string {
   const hash = tagKey.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
@@ -53,6 +56,7 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Home() {
   const [customEvents, setCustomEvents] = useState<CalendarEvent[]>([]);
+  const [assignmentTasks, setAssignmentTasks] = useState<CalendarEvent[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [enrolledCourses, setEnrolledCourses] = useState<Course[]>([]);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
@@ -153,6 +157,44 @@ export default function Home() {
 
     loadEvents();
   }, [userId, refreshKey]);
+
+  // Fetch assignments and map them into calendar task cards.
+  useEffect(() => {
+    if (!userId || enrolledCourses.length === 0) {
+      setAssignmentTasks([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadAssignmentTasks() {
+      try {
+        const assignments = await getAssignmentsForCourses(enrolledCourses.map((course) => course.id));
+        if (!cancelled) {
+          setAssignmentTasks(mapAssignmentsToCalendarTasks(assignments));
+        }
+      } catch (error) {
+        console.error('Failed to load assignments for calendar:', error);
+        if (!cancelled) {
+          setAssignmentTasks([]);
+        }
+      }
+    }
+
+    loadAssignmentTasks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, enrolledCourses, refreshKey]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeAssignmentsChanged(() => {
+      setRefreshKey(prev => prev + 1);
+    });
+
+    return unsubscribe;
+  }, []);
 
  const handleAddEvent = async (event: Omit<CalendarEvent, 'id'>): Promise<boolean | { success: boolean; eventId?: number }> => {
   try {
@@ -293,6 +335,7 @@ const handleRemoveEvent = async (eventId: string) => {
         ...event,
         date: parseLocalDate(event.date)
       })));
+      setRefreshKey(prev => prev + 1);
     } catch (error) {
       console.error('Failed to refetch events after update:', error);
     }
@@ -301,6 +344,7 @@ const handleRemoveEvent = async (eventId: string) => {
   return (
     <CalendarView 
       customEvents={customEvents}
+      assignmentTasks={assignmentTasks}
       onAddEvent={handleAddEvent}
       onRemoveEvent={handleRemoveEvent}
       courseColors={courseColors} 

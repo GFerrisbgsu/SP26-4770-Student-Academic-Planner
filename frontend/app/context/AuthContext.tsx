@@ -80,10 +80,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setSessionCheckInFlight(true);
       try {
+        console.log('[AuthContext] Validating session...');
         await userService.getCurrentUserFromBackend();
-      } catch {
-        // Session invalid - clear auth state
-        clearAuthState();
+        console.log('[AuthContext] Session validated successfully.');
+      } catch (err) {
+        // Session validation failed
+        // Note: If access token expired, useTokenRefresh hook will handle it via auto-refresh
+        // We only clear auth if we get a real error (not just expired token)
+        console.error('[AuthContext] Session validation error:', err);
+        // If it's a 401, the apiClient's auto-refresh or useTokenRefresh will handle it
+        // So we don't clear auth state immediately - let the refresh mechanism work
       } finally {
         if (isActive) {
           setSessionCheckInFlight(false);
@@ -96,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [user?.id, clearAuthState]);
+  }, [user?.id]);
 
   const login = useCallback(async (request: LoginRequest) => {
     setAuthLoading(true);

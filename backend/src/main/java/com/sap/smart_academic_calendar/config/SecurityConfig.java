@@ -45,6 +45,8 @@ public class SecurityConfig {
                 // Public program and semester reference data
                 .requestMatchers(HttpMethod.GET, "/api/programs", "/api/programs/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/semesters").permitAll()
+                // Budget endpoints - REQUIRE AUTHENTICATION
+                .requestMatchers("/api/budget/**").authenticated()
                 // Authenticated endpoints
                 .requestMatchers("/api/auth/me").authenticated()
                 .requestMatchers("/api/auth/passkey/register/**").authenticated() // Passkey registration requires auth

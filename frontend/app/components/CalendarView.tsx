@@ -10,6 +10,7 @@ import type { Project } from '~/services/projectService';
 
 interface CalendarViewProps {
   customEvents: CalendarEvent[];
+  assignmentTasks: CalendarEvent[];
   onAddEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<boolean | { success: boolean; eventId?: number }>;
   onRemoveEvent: (eventId: string) => Promise<void>;
   courseColors: Record<string, string>;
@@ -28,6 +29,7 @@ interface CalendarViewProps {
 
 export function CalendarView({ 
   customEvents, 
+  assignmentTasks,
   onAddEvent, 
   onRemoveEvent, 
   courseColors, 
@@ -140,7 +142,7 @@ export function CalendarView({
           event.courseId && whatIfCourseIds.includes(event.courseId)
         )
       ]
-    : [...allPredefinedEvents, ...customEvents];
+    : [...allPredefinedEvents, ...customEvents, ...assignmentTasks];
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -150,7 +152,7 @@ export function CalendarView({
         {/* Calendar Section - Left Side */}
         <div className="flex-1 flex flex-col bg-white border-r border-gray-200 overflow-hidden">
           <Calendar 
-            customEvents={isWhatIfMode ? [] : [...customEvents, ...projectDeadlineEvents]}
+            customEvents={isWhatIfMode ? [] : [...customEvents, ...assignmentTasks, ...projectDeadlineEvents]}
             courseColors={courseColors} 
             onCourseColorChange={onCourseColorChange}
             whatIfCourseIds={isWhatIfMode ? whatIfCourseIds : undefined}
@@ -178,7 +180,10 @@ export function CalendarView({
       <AddEventModal
       isOpen={isAddEventModalOpen}
       onClose={() => setIsAddEventModalOpen(false)}
-      onAddEvent={onAddEvent}
+      onAddEvent={async (event) => {
+        const result = await onAddEvent(event);
+        return typeof result === 'boolean' ? result : result.success;
+      }}
       onEventUpdate={handleEventUpdate}
       existingEvents={existingEvents}
       />

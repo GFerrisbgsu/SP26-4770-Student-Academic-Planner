@@ -1,7 +1,7 @@
 import type { DegreeProgressDTO, RequirementCategoryDTO } from '~/types/course';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
-const BASE_URL = `${API_BASE_URL}/courses`
+const BASE_URL = `${API_BASE_URL}/courses`;
 
 export interface Course {
   id: string;

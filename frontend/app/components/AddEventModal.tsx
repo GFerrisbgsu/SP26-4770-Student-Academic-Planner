@@ -6,7 +6,7 @@ import type { TodoList } from '~/services/todoListService';
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<boolean>;
+  onAddEvent: (event: Omit<CalendarEvent, 'id'>) => Promise<boolean | { success: boolean; eventId?: number }>;
   onEventUpdate?: () => Promise<void>; // Callback to refetch events after creation
   existingEvents: CalendarEvent[];
   projects?: Project[]; // Optional projects list

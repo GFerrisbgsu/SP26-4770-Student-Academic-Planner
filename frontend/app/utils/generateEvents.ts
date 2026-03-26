@@ -21,11 +21,13 @@ export interface CalendarEvent {
   endTime: number | null;
   color: string;
   location?: string;
-  type: 'class' | 'event';
+  type: 'class' | 'event' | 'task';
   description?: string;
   courseId?: string;
   projectId?: number;
   todoListId?: number;
+  assignmentId?: number;
+  source?: 'event' | 'assignment' | 'predefined';
   tag: EventTag; // NEW: Tag system
   completed?: boolean; // NEW: Track completion status
 }

@@ -2,12 +2,16 @@ package com.sap.smart_academic_calendar.controller;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sap.smart_academic_calendar.dto.CreateUserRequest;
 import com.sap.smart_academic_calendar.dto.UserDTO;
 import com.sap.smart_academic_calendar.service.UserService;
 
@@ -52,6 +56,21 @@ public class UserController {
             return ResponseEntity.ok(user);
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * POST endpoint to create a new user.
+     * @param request the create user request containing username, email, and password
+     * @return ResponseEntity with created user data
+     */
+    @PostMapping
+    public ResponseEntity<UserDTO> createUser(@RequestBody CreateUserRequest request) {
+        try {
+            UserDTO createdUser = userService.createUser(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 }

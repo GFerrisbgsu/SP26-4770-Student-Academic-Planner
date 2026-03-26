@@ -21,14 +21,24 @@ async function refreshAccessToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      console.log('[ApiClient] Attempting to refresh token via POST /api/auth/refresh');
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       });
 
-      return response.ok;
+      console.log('[ApiClient] Refresh endpoint response status:', response.status);
+      
+      if (!response.ok) {
+        const body = await response.text();
+        console.error('[ApiClient] Refresh failed with status', response.status, '- Body:', body);
+        return false;
+      }
+      
+      console.log('[ApiClient] Token refresh succeeded - new token in cookie');
+      return true;
     } catch (error) {
-      console.error('[ApiClient] Token refresh failed:', error);
+      console.error('[ApiClient] Token refresh error:', error);
       return false;
     } finally {
       isRefreshing = false;
@@ -42,19 +52,29 @@ async function refreshAccessToken(): Promise<boolean> {
 /**
  * Enhanced fetch that automatically retries with token refresh on 401 errors
  * 
- * @param url - The URL to fetch
+ * @param url - The URL or path to fetch
  * @param options - Fetch options (extends RequestInit)
  * @returns Promise<Response>
  */
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  // Ensure URL has the API base if not already a full URL
+  const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
+
   // Ensure credentials are included to send cookies
   const finalOptions: RequestInit = {
     ...options,
     credentials: 'include',
   };
 
+  // Add Content-Type header for POST/PUT/DELETE if body is present
+  if ((options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') && options.body && !finalOptions.headers) {
+    finalOptions.headers = {
+      'Content-Type': 'application/json',
+    };
+  }
+
   // Make initial request
-  let response = await fetch(url, finalOptions);
+  let response = await fetch(fullUrl, finalOptions);
 
   // If 401 Unauthorized, try to refresh token and retry
   if (response.status === 401) {
@@ -65,7 +85,7 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     if (refreshSuccess) {
       // Token refreshed successfully - retry original request
       console.log('[ApiClient] Token refreshed - retrying request');
-      response = await fetch(url, finalOptions);
+      response = await fetch(fullUrl, finalOptions);
     } else {
       // Refresh failed - redirect to login
       console.warn('[ApiClient] Token refresh failed - session expired');

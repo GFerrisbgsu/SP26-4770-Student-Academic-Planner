@@ -1,5 +1,5 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
-const BASE_URL = `${API_BASE_URL}/events`
+const BASE_URL = `${API_BASE_URL}/events`;
 
 export async function getUserEvents(userId: number) {
   const res = await fetch(`${BASE_URL}/user/${userId}`, {
