@@ -56,11 +56,8 @@ public class UserService {
             request.getLastName() != null ? request.getLastName() : "",
             hashedPassword
         );
-        user.setEmailVerified(false);
-
-        String verificationCode = emailService.generateVerificationCode();
-        user.setVerificationCode(verificationCode);
-        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
+        // Auto-verify users since email delivery is not available yet
+        user.setEmailVerified(true);
 
         User savedUser = userRepository.save(user);
 
@@ -70,18 +67,6 @@ public class UserService {
         } catch (Exception e) {
             log.error("Failed to create default to-do lists for user {}: {}", savedUser.getId(), e.getMessage());
             // Don't fail user creation if list creation fails
-        }
-
-        // Send verification email - don't fail user creation if email fails
-        try {
-            emailService.sendVerificationEmail(
-                savedUser.getEmail(),
-                savedUser.getUsername(),
-                verificationCode
-            );
-        } catch (Exception e) {
-            log.error("Failed to send verification email to {}: {}", savedUser.getEmail(), e.getMessage());
-            // User can request resend later
         }
 
         return convertToDTO(savedUser);
