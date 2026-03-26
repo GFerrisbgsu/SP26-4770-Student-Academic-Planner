@@ -1,6 +1,5 @@
 package com.sap.smart_academic_calendar.service;
 
-import com.resend.core.exception.ResendException;
 import com.sap.smart_academic_calendar.dto.CreateUserRequest;
 import com.sap.smart_academic_calendar.dto.UserDTO;
 import com.sap.smart_academic_calendar.model.User;
@@ -80,7 +79,7 @@ public class UserService {
                 savedUser.getUsername(),
                 verificationCode
             );
-        } catch (ResendException e) {
+        } catch (Exception e) {
             log.error("Failed to send verification email to {}: {}", savedUser.getEmail(), e.getMessage());
             // User can request resend later
         }
@@ -125,7 +124,7 @@ public class UserService {
 
         try {
             emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), verificationCode);
-        } catch (ResendException e) {
+        } catch (Exception e) {
             log.error("Failed to resend verification email to {}: {}", user.getEmail(), e.getMessage());
             throw new RuntimeException("Failed to send verification email. Please try again later.");
         }
@@ -160,7 +159,7 @@ public class UserService {
         try {
             // Send plain token in email (user needs this to submit)
             emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), plainToken);
-        } catch (ResendException e) {
+        } catch (Exception e) {
             log.error("Failed to send password reset email to {}: {}", user.getEmail(), e.getMessage());
         }
     }
