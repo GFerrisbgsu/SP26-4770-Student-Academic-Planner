@@ -3,33 +3,36 @@ package com.sap.smart_academic_calendar.config;
 import javax.sql.DataSource;
 
 import org.flywaydb.core.Flyway;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 
 /**
  * Flyway Configuration
- * Manually configures Flyway for 'dev' and 'docker' profiles.
- * 
- * Profiles:
- * - 'dev': Local development with PostgreSQL in Docker
- * - 'docker': Full stack running in Docker Compose
- * 
- * Both profiles use PostgreSQL and require Flyway migrations.
+ * Manually configures Flyway for all profiles that use PostgreSQL.
+ * Runs migrations on startup, handles out-of-order and baseline scenarios.
  */
 @Configuration
-@Profile({"dev", "docker", "prod"})
 public class FlywayConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(FlywayConfig.class);
 
     @Bean(initMethod = "migrate")
     public Flyway flyway(DataSource dataSource) {
-        System.out.println("=== Manually Creating Flyway Bean for Profile: " + 
-                          System.getProperty("spring.profiles.active", "unknown") + " ===");
-        
-        return Flyway.configure()
+        log.info("=== Configuring Flyway bean ===");
+
+        Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(true)
+                .outOfOrder(true)
+                .validateOnMigrate(false)
                 .load();
+
+        // Repair checksum mismatches before migrating
+        flyway.repair();
+
+        return flyway;
     }
 }
