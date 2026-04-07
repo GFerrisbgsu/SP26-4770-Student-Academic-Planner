@@ -50,21 +50,21 @@
 
 .dark {
   --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
+  --foreground: oklch(0.93 0 0);
   --card: oklch(0.145 0 0);
-  --card-foreground: oklch(0.985 0 0);
+  --card-foreground: oklch(0.93 0 0);
   --popover: oklch(0.145 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
+  --popover-foreground: oklch(0.93 0 0);
+  --primary: oklch(0.93 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
+  --secondary-foreground: oklch(0.93 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
+  --accent-foreground: oklch(0.93 0 0);
+  --destructive: oklch(0.70 0.22 25);
+  --destructive-foreground: oklch(0.93 0 0);
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
@@ -76,13 +76,52 @@
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.93 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.93 0 0);
   --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-accent-foreground: oklch(0.93 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+}
+
+/* BGSU Theme - Bowling Green State University colors (Orange #FF7300, Brown #4F2C1D) */
+[data-theme="bgsu"] {
+  --background: #FFF8F0;
+  --foreground: #1a0f08;
+  --card: #ffffff;
+  --card-foreground: #1a0f08;
+  --popover: #ffffff;
+  --popover-foreground: #1a0f08;
+  --primary: #FF7300;
+  --primary-foreground: #ffffff;
+  --secondary: #F5E6D8;
+  --secondary-foreground: #4F2C1D;
+  --muted: #F5E6D8;
+  --muted-foreground: #7A5A4A;
+  --accent: #4F2C1D;
+  --accent-foreground: #ffffff;
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: rgba(79, 44, 29, 0.15);
+  --input: transparent;
+  --input-background: #FDF0E4;
+  --switch-background: #C9A88E;
+  --ring: #4F2C1D;
+  --chart-1: #FF7300;
+  --chart-2: #4F2C1D;
+  --chart-3: #D4600A;
+  --chart-4: #8B5E3C;
+  --chart-5: #FFB366;
+  --radius: 0.625rem;
+  --sidebar: #4F2C1D;
+  --sidebar-foreground: #FFF8F0;
+  --sidebar-primary: #FF7300;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #6B3D2A;
+  --sidebar-accent-foreground: #FFF8F0;
+  --sidebar-border: rgba(255, 248, 240, 0.15);
+  --sidebar-ring: #FF7300;
 }
 
 @theme inline {
@@ -196,4 +235,361 @@ html {
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none;  /* Chrome, Safari and Opera */
+}
+
+/* ============================================================
+   THEME OVERRIDES
+   Remap hardcoded Tailwind gray/white classes to CSS variables
+   so dark and BGSU themes apply correctly across all components.
+   ============================================================ */
+
+/* --- Dark Theme Overrides --- */
+.dark .bg-white { background-color: var(--card) !important; }
+.dark .bg-gray-50 { background-color: var(--background) !important; }
+.dark .bg-gray-100 { background-color: var(--muted) !important; }
+.dark .bg-gray-200 { background-color: var(--accent) !important; }
+
+.dark .text-gray-900 { color: var(--foreground) !important; }
+.dark .text-gray-800 { color: var(--foreground) !important; }
+.dark .text-gray-700 { color: var(--foreground) !important; }
+.dark .text-gray-600 { color: var(--muted-foreground) !important; }
+.dark .text-gray-500 { color: var(--muted-foreground) !important; }
+.dark .text-gray-400 { color: var(--muted-foreground) !important; }
+
+.dark .border-gray-200 { border-color: var(--border) !important; }
+.dark .border-gray-300 { border-color: var(--border) !important; }
+
+.dark .hover\:bg-gray-50:hover { background-color: var(--accent) !important; }
+.dark .hover\:bg-gray-100:hover { background-color: var(--accent) !important; }
+.dark .hover\:bg-gray-200:hover { background-color: var(--accent) !important; }
+.dark .hover\:bg-gray-300:hover { background-color: oklch(0.35 0 0) !important; }
+
+.dark .hover\:text-gray-700:hover { color: var(--foreground) !important; }
+.dark .hover\:text-gray-900:hover { color: var(--foreground) !important; }
+
+.dark .hover\:border-gray-300:hover { border-color: var(--ring) !important; }
+.dark .hover\:border-gray-500:hover { border-color: var(--ring) !important; }
+
+/* Blue/indigo accent adjustments for dark backgrounds */
+.dark .bg-blue-50 { background-color: oklch(0.25 0.06 264) !important; }
+.dark .bg-blue-100 { background-color: oklch(0.30 0.08 264) !important; }
+.dark .text-blue-600 { color: oklch(0.70 0.2 264) !important; }
+.dark .text-blue-700 { color: oklch(0.70 0.2 264) !important; }
+.dark .text-blue-800 { color: oklch(0.70 0.2 264) !important; }
+.dark .text-blue-900 { color: oklch(0.80 0.15 264) !important; }
+.dark .border-blue-200 { border-color: oklch(0.35 0.1 264) !important; }
+.dark .hover\:bg-blue-100:hover { background-color: oklch(0.30 0.08 264) !important; }
+
+/* Gradient stop overrides (verify-email page: from-blue-50 to-indigo-100) */
+.dark .from-blue-50 { --tw-gradient-from: var(--background) !important; }
+.dark .to-indigo-100 { --tw-gradient-to: var(--background) !important; }
+
+/* Indigo accent adjustments for dark backgrounds */
+.dark .bg-indigo-50 { background-color: oklch(0.25 0.06 280) !important; }
+.dark .bg-indigo-100 { background-color: oklch(0.30 0.08 280) !important; }
+.dark .text-indigo-600 { color: oklch(0.65 0.2 280) !important; }
+.dark .text-indigo-700 { color: oklch(0.65 0.2 280) !important; }
+.dark .text-indigo-800 { color: oklch(0.70 0.18 280) !important; }
+.dark .text-indigo-900 { color: var(--foreground) !important; }
+.dark .border-indigo-200 { border-color: oklch(0.35 0.1 280) !important; }
+
+/* Red accent adjustments for dark backgrounds */
+.dark .bg-red-50 { background-color: oklch(0.25 0.06 25) !important; }
+.dark .bg-red-100 { background-color: oklch(0.30 0.08 25) !important; }
+.dark .text-red-500 { color: oklch(0.60 0.2 25) !important; }
+.dark .text-red-600 { color: oklch(0.65 0.2 25) !important; }
+.dark .text-red-700 { color: oklch(0.65 0.2 25) !important; }
+.dark .border-red-200 { border-color: oklch(0.35 0.1 25) !important; }
+.dark .hover\:bg-red-50:hover { background-color: oklch(0.22 0.04 25) !important; }
+.dark .hover\:bg-red-100:hover { background-color: oklch(0.30 0.08 25) !important; }
+.dark .hover\:border-red-200:hover { border-color: oklch(0.40 0.12 25) !important; }
+
+/* Orange accent adjustments for dark backgrounds (Clear Data button) */
+.dark .bg-orange-50 { background-color: oklch(0.25 0.06 55) !important; }
+.dark .text-orange-600 { color: oklch(0.65 0.18 55) !important; }
+.dark .hover\:bg-orange-100:hover { background-color: oklch(0.30 0.08 55) !important; }
+
+/* Green accent adjustments for dark backgrounds */
+.dark .bg-green-50 { background-color: oklch(0.25 0.06 155) !important; }
+.dark .bg-green-100 { background-color: oklch(0.30 0.08 155) !important; }
+.dark .text-green-600 { color: oklch(0.65 0.17 155) !important; }
+.dark .text-green-700 { color: oklch(0.65 0.17 155) !important; }
+.dark .text-green-900 { color: oklch(0.80 0.12 155) !important; }
+.dark .border-green-200 { border-color: oklch(0.35 0.1 155) !important; }
+
+/* Amber/yellow accent adjustments for dark backgrounds */
+.dark .bg-amber-50 { background-color: oklch(0.25 0.06 80) !important; }
+.dark .bg-amber-100 { background-color: oklch(0.30 0.08 80) !important; }
+.dark .text-amber-600 { color: oklch(0.70 0.18 80) !important; }
+.dark .text-amber-700 { color: oklch(0.70 0.18 80) !important; }
+.dark .text-amber-800 { color: oklch(0.75 0.15 80) !important; }
+.dark .text-amber-900 { color: oklch(0.80 0.12 80) !important; }
+.dark .border-amber-200 { border-color: oklch(0.35 0.1 80) !important; }
+.dark .bg-yellow-50 { background-color: oklch(0.25 0.06 90) !important; }
+.dark .bg-yellow-100 { background-color: oklch(0.30 0.08 90) !important; }
+.dark .text-yellow-600 { color: oklch(0.70 0.18 90) !important; }
+.dark .hover\:bg-yellow-100:hover { background-color: oklch(0.30 0.08 90) !important; }
+
+/* Purple accent adjustments for dark backgrounds */
+.dark .bg-purple-100 { background-color: oklch(0.30 0.08 300) !important; }
+.dark .text-purple-700 { color: oklch(0.65 0.18 300) !important; }
+
+/* Orange accent adjustments for dark backgrounds */
+.dark .bg-orange-100 { background-color: oklch(0.30 0.08 55) !important; }
+.dark .text-orange-700 { color: oklch(0.65 0.18 55) !important; }
+
+/* Pink accent adjustments for dark backgrounds */
+.dark .bg-pink-100 { background-color: oklch(0.30 0.08 350) !important; }
+.dark .text-pink-700 { color: oklch(0.65 0.18 350) !important; }
+
+/* Input / form field overrides for dark mode */
+.dark input,
+.dark textarea,
+.dark select {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+  color-scheme: dark;
+}
+.dark select:hover {
+  background-color: oklch(0.30 0 0) !important;
+}
+.dark select option {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* BGSU theme: form field overrides */
+[data-theme="bgsu"] input,
+[data-theme="bgsu"] textarea,
+[data-theme="bgsu"] select {
+  background-color: var(--input-background) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+[data-theme="bgsu"] select:hover {
+  background-color: #EADACB !important;
+}
+[data-theme="bgsu"] input::placeholder,
+[data-theme="bgsu"] textarea::placeholder {
+  color: var(--muted-foreground) !important;
+}
+
+/* --- BGSU Theme Overrides --- */
+[data-theme="bgsu"] .bg-white { background-color: var(--card) !important; }
+[data-theme="bgsu"] .bg-gray-50 { background-color: var(--background) !important; }
+[data-theme="bgsu"] .bg-gray-100 { background-color: var(--muted) !important; }
+[data-theme="bgsu"] .bg-gray-200 { background-color: var(--secondary) !important; }
+
+[data-theme="bgsu"] .text-gray-900 { color: var(--foreground) !important; }
+[data-theme="bgsu"] .text-gray-800 { color: var(--foreground) !important; }
+[data-theme="bgsu"] .text-gray-700 { color: var(--foreground) !important; }
+[data-theme="bgsu"] .text-gray-600 { color: var(--muted-foreground) !important; }
+[data-theme="bgsu"] .text-gray-500 { color: var(--muted-foreground) !important; }
+
+[data-theme="bgsu"] .border-gray-200 { border-color: var(--border) !important; }
+[data-theme="bgsu"] .border-gray-300 { border-color: var(--border) !important; }
+
+[data-theme="bgsu"] .hover\:bg-gray-50:hover { background-color: var(--secondary) !important; }
+[data-theme="bgsu"] .hover\:bg-gray-100:hover { background-color: var(--secondary) !important; }
+[data-theme="bgsu"] .hover\:bg-gray-200:hover { background-color: var(--muted) !important; }
+
+/* Remap blue accents to BGSU orange */
+[data-theme="bgsu"] .bg-blue-50 { background-color: #FFF0E0 !important; }
+[data-theme="bgsu"] .bg-blue-100 { background-color: #FFE0C0 !important; }
+[data-theme="bgsu"] .bg-blue-500 { background-color: var(--primary) !important; }
+[data-theme="bgsu"] .bg-blue-600 { background-color: #E56800 !important; }
+[data-theme="bgsu"] .hover\:bg-blue-600:hover { background-color: #E56800 !important; }
+[data-theme="bgsu"] .hover\:bg-blue-700:hover { background-color: #CC5E00 !important; }
+[data-theme="bgsu"] .hover\:bg-blue-100:hover { background-color: #FFE0C0 !important; }
+[data-theme="bgsu"] .text-blue-600 { color: var(--primary) !important; }
+[data-theme="bgsu"] .text-blue-700 { color: #E56800 !important; }
+[data-theme="bgsu"] .ring-blue-500 { --tw-ring-color: var(--primary) !important; }
+[data-theme="bgsu"] .focus\:ring-blue-500:focus { --tw-ring-color: var(--primary) !important; }
+[data-theme="bgsu"] .border-blue-500 { border-color: var(--primary) !important; }
+
+/* Remap blue text to BGSU brown for darker shades */
+[data-theme="bgsu"] .text-blue-800 { color: #5C3420 !important; }
+[data-theme="bgsu"] .text-blue-900 { color: #4F2C1D !important; }
+[data-theme="bgsu"] .hover\:text-blue-800:hover { color: #5C3420 !important; }
+
+/* Remap blue/indigo gradient stops to BGSU warm tones */
+[data-theme="bgsu"] .from-blue-50 { --tw-gradient-from: var(--background) !important; }
+[data-theme="bgsu"] .to-indigo-100 { --tw-gradient-to: var(--background) !important; }
+[data-theme="bgsu"] .from-blue-500 { --tw-gradient-from: #4F2C1D !important; }
+[data-theme="bgsu"] .to-blue-600 { --tw-gradient-to: #3A2010 !important; }
+[data-theme="bgsu"] .from-blue-600 { --tw-gradient-from: #3A2010 !important; }
+
+/* Remap purple gradient stops to BGSU brown (e.g. All Tasks button) */
+[data-theme="bgsu"] .from-purple-500 { --tw-gradient-from: #4F2C1D !important; }
+[data-theme="bgsu"] .to-purple-500 { --tw-gradient-to: #6B3D2A !important; }
+[data-theme="bgsu"] .bg-purple-100 { background-color: #F5E6D8 !important; }
+[data-theme="bgsu"] .text-purple-700 { color: #5C3420 !important; }
+
+/* Remap indigo to BGSU brown */
+[data-theme="bgsu"] .bg-indigo-50 { background-color: #F5E6D8 !important; }
+[data-theme="bgsu"] .bg-indigo-100 { background-color: #EADACB !important; }
+[data-theme="bgsu"] .text-indigo-600 { color: #6B3D2A !important; }
+[data-theme="bgsu"] .text-indigo-700 { color: #5C3420 !important; }
+[data-theme="bgsu"] .text-indigo-800 { color: #4F2C1D !important; }
+[data-theme="bgsu"] .text-indigo-900 { color: var(--foreground) !important; }
+[data-theme="bgsu"] .border-indigo-200 { border-color: rgba(79, 44, 29, 0.25) !important; }
+
+/* Keep green for success/confirmation states (e.g. email verified) */
+/* Only remap green buttons/badges to brown, not success feedback */
+[data-theme="bgsu"] .bg-green-600 { background-color: #6B3D2A !important; }
+[data-theme="bgsu"] .bg-green-700 { background-color: #5C3420 !important; }
+[data-theme="bgsu"] .hover\:bg-green-700:hover { background-color: #4F2C1D !important; }
+[data-theme="bgsu"] .border-green-500 { border-color: #6B3D2A !important; }
+
+/* Remap amber/yellow to warm brown tones */
+[data-theme="bgsu"] .bg-amber-50 { background-color: #FFF0E0 !important; }
+[data-theme="bgsu"] .bg-amber-100 { background-color: #FFE0C0 !important; }
+[data-theme="bgsu"] .text-amber-600 { color: #8B5E3C !important; }
+[data-theme="bgsu"] .text-amber-700 { color: #6B3D2A !important; }
+[data-theme="bgsu"] .text-amber-900 { color: #4F2C1D !important; }
+[data-theme="bgsu"] .border-amber-200 { border-color: rgba(139, 94, 60, 0.3) !important; }
+[data-theme="bgsu"] .bg-yellow-100 { background-color: #FFE0C0 !important; }
+[data-theme="bgsu"] .text-yellow-800 { color: #5C3420 !important; }
+[data-theme="bgsu"] .border-yellow-300 { border-color: rgba(139, 94, 60, 0.35) !important; }
+
+/* --- Slate-* Overrides (login, signup, reset-password pages) --- */
+
+/* Dark theme: slate backgrounds & gradients */
+.dark .from-slate-50 { --tw-gradient-from: var(--background) !important; }
+.dark .to-slate-100  { --tw-gradient-to: var(--background) !important; }
+.dark .bg-slate-50   { background-color: var(--background) !important; }
+.dark .bg-slate-100  { background-color: var(--muted) !important; }
+
+/* Dark theme: slate text */
+.dark .text-slate-900 { color: var(--foreground) !important; }
+.dark .text-slate-800 { color: var(--foreground) !important; }
+.dark .text-slate-700 { color: var(--foreground) !important; }
+.dark .text-slate-600 { color: var(--muted-foreground) !important; }
+.dark .text-slate-500 { color: var(--muted-foreground) !important; }
+
+/* Dark theme: slate borders */
+.dark .border-slate-200 { border-color: var(--border) !important; }
+.dark .border-slate-300 { border-color: var(--border) !important; }
+
+/* BGSU theme: slate backgrounds & gradients */
+[data-theme="bgsu"] .from-slate-50 { --tw-gradient-from: var(--background) !important; }
+[data-theme="bgsu"] .to-slate-100  { --tw-gradient-to: var(--background) !important; }
+[data-theme="bgsu"] .bg-slate-50   { background-color: var(--background) !important; }
+[data-theme="bgsu"] .bg-slate-100  { background-color: var(--muted) !important; }
+
+/* BGSU theme: slate text */
+[data-theme="bgsu"] .text-slate-900 { color: var(--foreground) !important; }
+[data-theme="bgsu"] .text-slate-800 { color: var(--foreground) !important; }
+[data-theme="bgsu"] .text-slate-700 { color: var(--foreground) !important; }
+[data-theme="bgsu"] .text-slate-600 { color: var(--muted-foreground) !important; }
+[data-theme="bgsu"] .text-slate-500 { color: var(--muted-foreground) !important; }
+
+/* BGSU theme: slate borders */
+[data-theme="bgsu"] .border-slate-200 { border-color: var(--border) !important; }
+[data-theme="bgsu"] .border-slate-300 { border-color: var(--border) !important; }
+
+/* BGSU Theme: Dark brown navigation sidebar with orange accents */
+/* Use double attribute selector for higher specificity to beat general .bg-white override */
+[data-theme="bgsu"][data-theme="bgsu"] aside {
+  background-color: var(--sidebar) !important;
+  border-color: var(--sidebar-border) !important;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .text-gray-900,
+[data-theme="bgsu"][data-theme="bgsu"] aside .text-gray-800,
+[data-theme="bgsu"][data-theme="bgsu"] aside .text-gray-700,
+[data-theme="bgsu"][data-theme="bgsu"] aside .font-bold,
+[data-theme="bgsu"][data-theme="bgsu"] aside .font-medium,
+[data-theme="bgsu"][data-theme="bgsu"] aside span {
+  color: var(--primary) !important;
+}
+/* Preserve white text on avatar initials and white icon text in sidebar */
+[data-theme="bgsu"][data-theme="bgsu"] aside .text-white {
+  color: #ffffff !important;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .text-gray-600,
+[data-theme="bgsu"][data-theme="bgsu"] aside .text-gray-500 {
+  color: var(--primary) !important;
+  opacity: 0.7;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .text-blue-600 {
+  color: var(--primary) !important;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .bg-blue-50 {
+  background-color: var(--sidebar-accent) !important;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .bg-white,
+[data-theme="bgsu"][data-theme="bgsu"] aside .bg-gray-50 {
+  background-color: var(--sidebar) !important;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .border-gray-200,
+[data-theme="bgsu"][data-theme="bgsu"] aside .border-gray-300 {
+  border-color: rgba(255, 248, 240, 0.12) !important;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .hover\:bg-gray-100:hover {
+  background-color: var(--sidebar-accent) !important;
+}
+[data-theme="bgsu"][data-theme="bgsu"] aside .bg-gray-400 {
+  background-color: var(--sidebar-accent) !important;
+}
+/* Sidebar icons → orange */
+[data-theme="bgsu"][data-theme="bgsu"] aside svg {
+  color: var(--primary) !important;
+}
+/* Chevron toggle button */
+[data-theme="bgsu"][data-theme="bgsu"] aside button {
+  color: var(--primary) !important;
+}
+
+/* --- Rich Text Editor --- */
+.rich-text-editor .ProseMirror {
+  min-height: 260px;
+}
+
+.rich-text-editor .ProseMirror:focus {
+  outline: none;
+}
+
+.rich-text-editor .ProseMirror p {
+  margin: 0.5rem 0;
+}
+
+.rich-text-editor .ProseMirror h2 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  margin: 0.75rem 0;
+}
+
+.rich-text-editor .ProseMirror ul,
+.rich-text-editor .ProseMirror ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.rich-text-editor .ProseMirror ul {
+  list-style-type: disc;
+}
+
+.rich-text-editor .ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.rich-text-editor .ProseMirror code {
+  background-color: #f3f4f6;
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+}
+
+.rich-text-editor .ProseMirror pre {
+  background-color: #111827;
+  color: #f9fafb;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  margin: 0.75rem 0;
+  overflow-x: auto;
 }

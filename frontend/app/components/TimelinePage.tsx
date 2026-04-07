@@ -207,7 +207,7 @@ export function TimelinePage({ customEvents, courseColors, isWhatIfMode, whatIfC
   const hours = Array.from({ length: 18 }, (_, i) => i + 6);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-gray-50">
       {/* Top Navigation */}
       {/* Side Navigation Bar handled by root layout */}
       

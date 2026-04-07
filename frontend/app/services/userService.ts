@@ -4,7 +4,7 @@
  * Communicates with Spring Boot backend at /api/users
  */
 
-import type { UserDTO, CreateUserRequest, LoginRequest, LoginResponse } from '~/types/user';
+import type { UserDTO, CreateUserRequest, UpdateUserRequest, LoginRequest, LoginResponse } from '~/types/user';
 import { apiFetch } from '~/services/apiClient';
 
 // Base API URL - Uses environment variable with fallback for local development
@@ -272,6 +272,83 @@ export class UserService {
     } catch (error) {
       console.error('[UserService] Error getting current user:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Update user profile
+   * Calls PUT /api/users/{id} endpoint
+   * @param id - User ID
+   * @param request - UpdateUserRequest with optional firstName, lastName, email
+   * @returns Promise<UserDTO> - Updated user data
+   */
+  async updateUser(id: number, request: UpdateUserRequest): Promise<UserDTO> {
+    const response = await apiFetch(`${this.baseUrl}/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to update user');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Delete user account
+   * Calls DELETE /api/users/{id} endpoint
+   * @param id - User ID
+   */
+  async deleteUser(id: number): Promise<void> {
+    const response = await apiFetch(`${this.baseUrl}/users/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete user account');
+    }
+  }
+
+  /**
+   * Upload user avatar image
+   * Calls POST /api/users/{id}/avatar endpoint with multipart/form-data
+   * @param id - User ID
+   * @param file - Image file to upload
+   * @returns Promise<UserDTO> - Updated user data with avatarUrl
+   */
+  async uploadAvatar(id: number, file: File): Promise<UserDTO> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await apiFetch(`${this.baseUrl}/users/${id}/avatar`, {
+      method: 'POST',
+      body: formData,
+      // Do NOT set Content-Type - browser sets it with boundary for multipart
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to upload avatar');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Delete user avatar
+   * Calls DELETE /api/users/{id}/avatar endpoint
+   * @param id - User ID
+   */
+  async deleteAvatar(id: number): Promise<void> {
+    const response = await apiFetch(`${this.baseUrl}/users/${id}/avatar`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete avatar');
     }
   }
 }

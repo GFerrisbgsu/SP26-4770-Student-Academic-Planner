@@ -315,6 +315,24 @@ public class BudgetController {
     }
 
     /**
+     * PUT update a budget limit
+     */
+    @PutMapping("/limits/{limitId}")
+    public ResponseEntity<BudgetLimitDTO> updateBudgetLimit(
+        @PathVariable Long limitId,
+        @RequestBody CreateBudgetLimitRequest request,
+        Authentication authentication
+    ) {
+        try {
+            Long userId = getCurrentUserId(authentication);
+            BudgetLimitDTO limit = budgetService.updateBudgetLimit(userId, limitId, request);
+            return ResponseEntity.ok(limit);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+    }
+
+    /**
      * DELETE a budget limit
      */
     @DeleteMapping("/limits/{limitId}")

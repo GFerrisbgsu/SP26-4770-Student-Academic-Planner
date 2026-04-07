@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const BASE_URL = `${API_BASE_URL}/notes`;
+import { apiFetch } from '~/services/apiClient';
 
 interface CourseNoteDTO {
   id: number;
@@ -36,7 +37,7 @@ function mapCourseNote(dto: CourseNoteDTO): CourseNote {
 }
 
 export async function getNotesByCourse(courseId: string): Promise<CourseNote[]> {
-  const res = await fetch(`${BASE_URL}/course/${courseId}`, {
+  const res = await apiFetch(`${BASE_URL}/course/${courseId}`, {
     credentials: 'include',
   });
 
@@ -49,7 +50,7 @@ export async function getNotesByCourse(courseId: string): Promise<CourseNote[]> 
 }
 
 export async function createNote(courseId: string, request: CreateCourseNoteRequest): Promise<CourseNote> {
-  const res = await fetch(`${BASE_URL}/course/${courseId}`, {
+  const res = await apiFetch(`${BASE_URL}/course/${courseId}`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -65,7 +66,7 @@ export async function createNote(courseId: string, request: CreateCourseNoteRequ
 }
 
 export async function updateNote(noteId: number, request: CreateCourseNoteRequest): Promise<CourseNote> {
-  const res = await fetch(`${BASE_URL}/${noteId}`, {
+  const res = await apiFetch(`${BASE_URL}/${noteId}`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -81,7 +82,7 @@ export async function updateNote(noteId: number, request: CreateCourseNoteReques
 }
 
 export async function deleteNote(noteId: number): Promise<void> {
-  const res = await fetch(`${BASE_URL}/${noteId}`, {
+  const res = await apiFetch(`${BASE_URL}/${noteId}`, {
     method: 'DELETE',
     credentials: 'include',
   });

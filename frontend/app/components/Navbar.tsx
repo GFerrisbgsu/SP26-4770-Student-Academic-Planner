@@ -28,7 +28,7 @@ export function Navbar() {
   };
 
   return (
-    <aside className={`bg-white border-r border-gray-200 h-screen flex flex-col transition-all duration-300 ${
+    <aside className={`bg-white border-r border-gray-200 h-full flex flex-col transition-all duration-300 ${
       isCollapsed ? 'w-20' : 'w-64'
     }`}>
       {/* Header Section with Logo and Toggle */}

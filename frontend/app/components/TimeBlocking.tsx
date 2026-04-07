@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { Plus, Clock, X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Zap, Save, Upload, LayoutGrid, Columns2 } from 'lucide-react';
+import { Plus, Clock, X, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Zap, Save, LayoutGrid, Columns2, Library } from 'lucide-react';
 import { getAllEventsForMonth } from '~/utils/generateEvents';
 import type { CalendarEvent, CourseForEvents } from '~/utils/generateEvents';
 import { getEnrolledCourses } from '~/services/courseService';
 import { getTagInfo, getAllTags } from '~/utils/tagUtils';
 import type { EventTag } from '~/utils/tagUtils';
+import { SavePresetModal } from '~/components/SavePresetModal';
+import { PresetLibraryModal } from '~/components/PresetLibraryModal';
+import { EditPresetModal } from '~/components/EditPresetModal';
+import type { Preset, PresetBlock, DayOfWeek } from '~/types/preset';
+import { addPreset, getUserPresets, updatePreset } from '~/utils/presetUtils';
 
 interface TimeBlock {
   id: string;
@@ -20,7 +25,6 @@ interface TimeBlock {
 }
 
 type ViewMode = 'daily' | 'weekly';
-type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6; // 0 = Sunday, 6 = Saturday
 
 // Time blocking constants
 const HOUR_HEIGHT = 80; // pixels per hour
@@ -53,16 +57,7 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     loadCourses();
   }, []);
   
-  // Store presets by day of week (0-6) - load from localStorage or use defaults
-  const [presets, setPresets] = useState<Record<number, Omit<TimeBlock, 'id' | 'date' | 'isCalendarEvent' | 'calendarEventId'>[]>>(() => {
-    try {
-      const saved = localStorage.getItem('timeBlockingPresets');
-      return saved ? JSON.parse(saved) : {};
-    } catch (error) {
-      console.error('Failed to load presets from localStorage:', error);
-      return {};
-    }
-  });
+
   
   const [timeBlocks, setTimeBlocks] = useState<TimeBlock[]>(() => {
     try {
@@ -75,7 +70,10 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
   });
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showPresetModal, setShowPresetModal] = useState(false);
+  const [showSavePresetModal, setShowSavePresetModal] = useState(false);
+  const [showLibraryModal, setShowLibraryModal] = useState(false);
+  const [showEditPresetModal, setShowEditPresetModal] = useState(false);
+  const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<TimeBlock | null>(null);
 
@@ -88,14 +86,7 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     }
   }, [timeBlocks]);
 
-  // Persist presets to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem('timeBlockingPresets', JSON.stringify(presets));
-    } catch (error) {
-      console.error('Failed to save presets to localStorage:', error);
-    }
-  }, [presets]);
+
   
   // Drag-to-create state
   const [dragStart, setDragStart] = useState<{ hour: number; y: number } | null>(null);
@@ -196,41 +187,7 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     setSelectedDate(newDate);
   };
   
-  // Preset management functions
-  const savePresetForDay = (dayOfWeek: DayOfWeek) => {
-    const dateStr = getDateString(selectedDate);
-    const dayBlocks = timeBlocks.filter(b => b.date === dateStr && !b.isCalendarEvent);
-    
-    const presetBlocks = dayBlocks.map(({ id, date, isCalendarEvent, calendarEventId, ...rest }) => rest);
-    
-    setPresets(prev => ({
-      ...prev,
-      [dayOfWeek]: presetBlocks
-    }));
-    
-    alert(`Preset saved for ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek]}!`);
-  };
-  
-  const loadPresetForDay = (dayOfWeek: DayOfWeek) => {
-    const preset = presets[dayOfWeek];
-    if (!preset || preset.length === 0) {
-      alert('No preset found for this day of the week.');
-      return;
-    }
-    
-    const dateStr = getDateString(selectedDate);
-    
-    // Convert preset blocks to time blocks with current date
-    const newBlocks = preset.map(block => ({
-      ...block,
-      id: `block-${Date.now()}-${Math.random()}`,
-      date: dateStr
-    }));
-    
-    setTimeBlocks(prev => [...prev, ...newBlocks]);
-    alert(`Loaded ${newBlocks.length} blocks from ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dayOfWeek]} preset!`);
-    setShowPresetModal(false);
-  };
+
 
   // Time slots from 12 AM to 11:59 PM (all 24 hours)
   // Default view shows 6 AM - 11 PM, but users can scroll to see earlier/later times
@@ -297,6 +254,53 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
     setShowCopyModal(false);
     setSelectedBlock(null);
     alert(`Block "${newBlock.title}" copied to ${targetDate.toLocaleDateString()}`);
+  };
+
+  const handleSavePreset = (preset: Omit<Preset, 'createdAt' | 'updatedAt'>) => {
+    try {
+      addPreset(preset);
+      setShowSavePresetModal(false);
+      setSelectedBlock(null);
+      alert(`Preset "${preset.name}" saved successfully!`);
+    } catch (error) {
+      console.error('Failed to save preset:', error);
+      alert('Failed to save preset');
+    }
+  };
+
+  const handleLoadPreset = (preset: Preset) => {
+    const dateStr = getDateString(selectedDate);
+    
+    // Convert preset blocks to time blocks with current date
+    const newBlocks = preset.blocks.map((block, idx) => ({
+      id: `block-${Date.now()}-${idx}-${Math.random()}`,
+      title: block.title,
+      startTime: block.startTime,
+      endTime: block.endTime,
+      tag: block.tag,
+      description: block.description,
+      isCalendarEvent: false,
+      date: dateStr
+    }));
+
+    setTimeBlocks(prev => [...prev, ...newBlocks]);
+    setShowLibraryModal(false);
+    alert(`Loaded "${preset.name}" with ${newBlocks.length} block${newBlocks.length !== 1 ? 's' : ''} to ${selectedDate.toLocaleDateString()}`);
+  };
+
+  const handleEditPreset = (updates: Partial<Preset>) => {
+    if (!editingPreset) return;
+
+    try {
+      console.log('Updating preset:', editingPreset.id, updates);
+      updatePreset(editingPreset.id, updates);
+      setShowEditPresetModal(false);
+      setEditingPreset(null);
+      alert('Preset updated successfully!');
+    } catch (error) {
+      console.error('Failed to update preset:', error);
+      alert('Failed to update preset');
+    }
   };
 
   const getTotalTimeByTag = () => {
@@ -502,7 +506,7 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
   const timeTotals = getTotalTimeByTag();
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50">
       {/* Side Navigation Bar */}
       {/* Side Navigation Bar handled by root layout */}
 
@@ -573,11 +577,11 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
                   {showCalendarEvents ? 'Hide' : 'Show'} Calendar Events
                 </button>
                 <button
-                  onClick={() => setShowPresetModal(true)}
+                  onClick={() => setShowLibraryModal(true)}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <Save className="w-4 h-4" />
-                  Presets
+                  <Library className="w-4 h-4" />
+                  Preset Library
                 </button>
                 <button
                   onClick={() => setShowAddModal(true)}
@@ -737,19 +741,28 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
               </div>
 
               {!selectedBlock.isCalendarEvent && (
-                <div className="flex gap-2 mt-4">
+                <div className="flex flex-col gap-2 mt-4">
                   <button
-                    onClick={() => setShowCopyModal(true)}
-                    className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    onClick={() => setShowSavePresetModal(true)}
+                    className="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
                   >
-                    Copy to Another Day
+                    <Save className="w-4 h-4" />
+                    Save as Preset
                   </button>
-                  <button
-                    onClick={() => handleDeleteBlock(selectedBlock.id)}
-                    className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                  >
-                    Delete Block
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowCopyModal(true)}
+                      className="flex-1 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      Copy to Another Day
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBlock(selectedBlock.id)}
+                      className="flex-1 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                    >
+                      Delete Block
+                    </button>
+                  </div>
                 </div>
               )}
               
@@ -784,17 +797,6 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
           />
         )}
 
-        {/* Preset Modal */}
-        {showPresetModal && (
-          <PresetModal
-            selectedDate={selectedDate}
-            presets={presets}
-            onClose={() => setShowPresetModal(false)}
-            onSave={savePresetForDay}
-            onLoad={loadPresetForDay}
-          />
-        )}
-
         {/* Copy Block Modal */}
         {showCopyModal && selectedBlock && (
           <CopyBlockModal
@@ -802,6 +804,49 @@ export function TimeBlocking({ customEvents = [], courseColors = {} }: TimeBlock
             currentDate={selectedDate}
             onClose={() => setShowCopyModal(false)}
             onCopy={handleCopyBlock}
+          />
+        )}
+
+        {/* Save Preset Modal */}
+        {showSavePresetModal && selectedBlock && !selectedBlock.isCalendarEvent && (
+          <SavePresetModal
+            blocks={[
+              {
+                title: selectedBlock.title,
+                startTime: selectedBlock.startTime,
+                endTime: selectedBlock.endTime,
+                tag: selectedBlock.tag,
+                description: selectedBlock.description
+              }
+            ]}
+            currentDate={selectedDate}
+            onClose={() => setShowSavePresetModal(false)}
+            onSave={handleSavePreset}
+          />
+        )}
+
+        {/* Preset Library Modal */}
+        {showLibraryModal && (
+          <PresetLibraryModal
+            userPresets={getUserPresets()}
+            onClose={() => setShowLibraryModal(false)}
+            onLoadPreset={handleLoadPreset}
+            onEditPreset={(preset) => {
+              setEditingPreset(preset);
+              setShowEditPresetModal(true);
+            }}
+          />
+        )}
+
+        {/* Edit Preset Modal */}
+        {showEditPresetModal && editingPreset && (
+          <EditPresetModal
+            preset={editingPreset}
+            onClose={() => {
+              setShowEditPresetModal(false);
+              setEditingPreset(null);
+            }}
+            onSave={handleEditPreset}
           />
         )}
       </div>
@@ -1349,111 +1394,6 @@ function AddBlockModal({ selectedDate, onClose, onAdd, dragStart, dragCurrent }:
             </button>
           </div>
         </form>
-      </div>
-    </div>
-  );
-}
-
-// Preset Modal Component
-interface PresetModalProps {
-  selectedDate: Date;
-  presets: Record<number, Omit<TimeBlock, 'id' | 'date' | 'isCalendarEvent' | 'calendarEventId'>[]>;
-  onClose: () => void;
-  onSave: (dayOfWeek: DayOfWeek) => void;
-  onLoad: (dayOfWeek: DayOfWeek) => void;
-}
-
-function PresetModal({ selectedDate, presets, onClose, onSave, onLoad }: PresetModalProps) {
-  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const currentDayOfWeek = selectedDate.getDay() as DayOfWeek;
-
-  return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">Preset Management</h2>
-              <p className="text-sm text-gray-600 mt-1">Save or load time blocks for specific days of the week</p>
-            </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 overflow-y-auto flex-1">
-          {/* Save Current Day */}
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="font-semibold text-green-900 mb-2 flex items-center gap-2">
-              <Save className="w-4 h-4" />
-              Save Current Day Blocks as Preset
-            </h3>
-            <p className="text-sm text-green-800 mb-3">
-              Save today's time blocks ({selectedDate.toLocaleDateString()}) as a preset for:
-            </p>
-            <div className="grid grid-cols-7 gap-2">
-              {dayNames.map((day, index) => (
-                <button
-                  key={index}
-                  onClick={() => onSave(index as DayOfWeek)}
-                  className={`px-2 py-2 text-xs font-medium rounded-lg transition-colors ${index === currentDayOfWeek ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-white border border-green-300 text-green-700 hover:bg-green-50'}`}
-                >
-                  {day}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Load Presets */}
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="font-semibold text-blue-900 mb-2 flex items-center gap-2">
-              <Upload className="w-4 h-4" />
-              Load Preset to Current Day
-            </h3>
-            <p className="text-sm text-blue-800 mb-3">
-              Load a saved preset and add those blocks to {selectedDate.toLocaleDateString()} ({dayNames[currentDayOfWeek]}):
-            </p>
-            <div className="space-y-2">
-              {dayNames.map((day, index) => {
-                const preset = presets[index];
-                const hasPreset = preset && preset.length > 0;
-                const isMatchingDay = index === currentDayOfWeek;
-                const canLoad = hasPreset && isMatchingDay;
-
-                return (
-                  <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
-                    <div>
-                      <div className={`font-medium ${isMatchingDay ? 'text-blue-600' : 'text-gray-900'}`}>
-                        {day} {isMatchingDay && '(Today)'}
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        {hasPreset ? `${preset.length} blocks saved` : 'No preset'}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => canLoad && onLoad(index as DayOfWeek)}
-                      disabled={!canLoad}
-                      title={!isMatchingDay ? 'Can only load presets matching the current day of week' : !hasPreset ? 'No preset saved for this day' : 'Click to load preset'}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${canLoad ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                    >
-                      Load
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-6 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            Close
-          </button>
-        </div>
       </div>
     </div>
   );

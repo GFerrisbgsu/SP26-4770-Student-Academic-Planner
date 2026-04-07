@@ -67,7 +67,8 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
   };
 
   // Add Content-Type header for POST/PUT/DELETE if body is present
-  if ((options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') && options.body && !finalOptions.headers) {
+  // Skip for FormData — the browser must set Content-Type with the multipart boundary
+  if ((options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') && options.body && !finalOptions.headers && !(options.body instanceof FormData)) {
     finalOptions.headers = {
       'Content-Type': 'application/json',
     };
@@ -76,9 +77,10 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
   // Make initial request
   let response = await fetch(fullUrl, finalOptions);
 
-  // If 401 Unauthorized, try to refresh token and retry
-  if (response.status === 401) {
-    console.log('[ApiClient] Received 401 - attempting token refresh');
+  // If unauthorized/forbidden, try to refresh token and retry.
+  // Some environments return 403 instead of 401 for expired/missing auth context.
+  if (response.status === 401 || response.status === 403) {
+    console.log(`[ApiClient] Received ${response.status} - attempting token refresh`);
 
     const refreshSuccess = await refreshAccessToken();
 
@@ -98,6 +100,24 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         window.location.href = '/login?expired=true';
       }
+    }
+  }
+
+  // If 403 Forbidden on auth endpoints, it typically means session is invalid
+  // List of endpoints that indicate authentication/session issues when returning 403
+  const authRelatedEndpoints = ['/auth/me', '/auth/passkeys', '/budget/'];
+  const isAuthRelatedEndpoint = authRelatedEndpoints.some(endpoint => fullUrl.includes(endpoint));
+
+  if (response.status === 403 && isAuthRelatedEndpoint) {
+    console.warn('[ApiClient] Received 403 on auth-related endpoint - session likely expired');
+    
+    // Clear any user data
+    localStorage.removeItem('currentUser');
+    sessionStorage.clear();
+    
+    // Redirect to login page
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.href = '/login?expired=true';
     }
   }
 

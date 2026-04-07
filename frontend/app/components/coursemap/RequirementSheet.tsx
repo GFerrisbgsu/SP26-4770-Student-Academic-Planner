@@ -193,7 +193,7 @@ export function RequirementSheet({
           {/* Existing enrollment info */}
           {existingEnrollment && (
             <div
-              className="rounded-lg border p-3 space-y-2 cursor-pointer hover:bg-accent"
+              className="rounded-lg border p-3 space-y-2 cursor-pointer hover:bg-muted"
               onClick={() => setPreviewCourseId(existingEnrollment.courseId)}
             >
               <div className="flex items-center justify-between">
@@ -229,7 +229,7 @@ export function RequirementSheet({
           {/* Fixed course — show enroll button if not enrolled */}
           {bubble.type === 'fixed' && !existingEnrollment && bubble.courseCode && (
             <div
-              className="rounded-lg border p-3 space-y-2 cursor-pointer hover:bg-accent"
+            className="rounded-lg border p-3 space-y-2 cursor-pointer hover:bg-muted"
               onClick={() => {
                 const id = bubble.courseCode!.toLowerCase().replace(/\s+/g, '');
                 setPreviewCourseId(id);
@@ -300,7 +300,7 @@ export function RequirementSheet({
                     eligibleCourses.map((course) => (
                       <div
                         key={course.id}
-                        className="flex items-center justify-between rounded-lg border p-2 hover:bg-accent cursor-pointer"
+                        className="flex items-center justify-between rounded-lg border p-2 hover:bg-muted cursor-pointer"
                         onClick={() => setPreviewCourseId(course.courseId)}
                       >
                         <div className="min-w-0 flex-1">

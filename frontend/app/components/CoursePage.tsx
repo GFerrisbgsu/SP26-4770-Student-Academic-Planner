@@ -62,7 +62,7 @@ export function CoursePage({ courseColors }: CoursePageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Loading course...</h2>
         </div>
@@ -72,7 +72,7 @@ export function CoursePage({ courseColors }: CoursePageProps) {
 
   if (!course) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Course not found</h2>
           <Link to="/" className="text-blue-600 hover:underline">
@@ -90,7 +90,7 @@ export function CoursePage({ courseColors }: CoursePageProps) {
   const courseColor = courseColors[course.id] || course.color;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-full bg-gray-50">
 
       <div className="flex-1 p-8">
         <div className="max-w-5xl mx-auto">

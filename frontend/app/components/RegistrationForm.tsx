@@ -161,8 +161,8 @@ export function RegistrationForm({ onRegistrationSuccess, className = '' }: Regi
       if (onRegistrationSuccess) {
         onRegistrationSuccess();
       } else {
-        // Redirect to login page (email verification is temporarily disabled)
-        navigate('/login');
+        // Redirect to email verification page
+        navigate(`/verify-email?email=${encodeURIComponent(email)}`);
       }
 
       console.log('Registration successful');

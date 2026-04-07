@@ -1,6 +1,5 @@
 package com.sap.smart_academic_calendar.controller;
 
-import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;

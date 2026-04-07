@@ -1,5 +1,5 @@
-import { format } from 'date-fns';
-import { Trash2 } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { Trash2, Edit2 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import {
   Table,
@@ -23,17 +23,26 @@ interface Transaction {
 interface TransactionTableProps {
   transactions: Transaction[];
   onDelete?: (transactionId: number) => void;
+  onEdit?: (transaction: Transaction) => void;
   isLoading?: boolean;
 }
 
 export function TransactionTable({
   transactions,
   onDelete,
+  onEdit,
   isLoading,
 }: TransactionTableProps) {
+  // Sort transactions by date (most recent first)
+  const sortedTransactions = [...transactions].sort((a, b) => {
+    const dateA = parseISO(a.transactionDate).getTime();
+    const dateB = parseISO(b.transactionDate).getTime();
+    return dateB - dateA;
+  });
+
   // Separate expenses and income
-  const expenses = transactions.filter(tx => tx.type === 'EXPENSE');
-  const income = transactions.filter(tx => tx.type === 'INCOME');
+  const expenses = sortedTransactions.filter(tx => tx.type === 'EXPENSE');
+  const income = sortedTransactions.filter(tx => tx.type === 'INCOME');
 
   // Only count expenses for "Total Spent"
   const totalExpenses = expenses.reduce(
@@ -82,14 +91,14 @@ export function TransactionTable({
                   <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  {onDelete && <TableHead className="w-10"></TableHead>}
+                  {(onDelete || onEdit) && <TableHead className="w-16 text-center">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {income.map((transaction) => (
                   <TableRow key={transaction.id} className="hover:bg-green-50">
                     <TableCell className="font-medium">
-                      {format(new Date(transaction.transactionDate), 'MMM d, yyyy')}
+                      {format(parseISO(transaction.transactionDate), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -106,20 +115,34 @@ export function TransactionTable({
                     <TableCell className="text-right font-medium text-green-600">
                       +${parseFloat(transaction.amount).toFixed(2)}
                     </TableCell>
-                    {onDelete && (
-                      <TableCell>
-                        <button
-                          onClick={() => {
-                            if (window.confirm('Delete this transaction?')) {
-                              onDelete(transaction.id);
-                            }
-                          }}
-                          className="p-1 text-gray-600 hover:bg-red-100 hover:text-red-600 rounded transition-colors"
-                          disabled={isLoading}
-                          aria-label="Delete transaction"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                    {(onDelete || onEdit) && (
+                      <TableCell className="text-center">
+                        <div className="flex gap-1 justify-center">
+                          {onEdit && (
+                            <button
+                              onClick={() => onEdit(transaction)}
+                              className="p-1 text-gray-600 hover:bg-blue-100 hover:text-blue-600 rounded transition-colors"
+                              disabled={isLoading}
+                              aria-label="Edit transaction"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm('Delete this transaction?')) {
+                                  onDelete(transaction.id);
+                                }
+                              }}
+                              className="p-1 text-gray-600 hover:bg-red-100 hover:text-red-600 rounded transition-colors"
+                              disabled={isLoading}
+                              aria-label="Delete transaction"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -144,14 +167,14 @@ export function TransactionTable({
                   <TableHead>Category</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
-                  {onDelete && <TableHead className="w-10"></TableHead>}
+                  {(onDelete || onEdit) && <TableHead className="w-16 text-center">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {expenses.map((transaction) => (
                   <TableRow key={transaction.id} className="hover:bg-red-50">
                     <TableCell className="font-medium">
-                      {format(new Date(transaction.transactionDate), 'MMM d, yyyy')}
+                      {format(parseISO(transaction.transactionDate), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -168,20 +191,34 @@ export function TransactionTable({
                     <TableCell className="text-right font-medium text-red-600">
                       -${parseFloat(transaction.amount).toFixed(2)}
                     </TableCell>
-                    {onDelete && (
-                      <TableCell>
-                        <button
-                          onClick={() => {
-                            if (window.confirm('Delete this transaction?')) {
-                              onDelete(transaction.id);
-                            }
-                          }}
-                          className="p-1 text-gray-600 hover:bg-red-100 hover:text-red-600 rounded transition-colors"
-                          disabled={isLoading}
-                          aria-label="Delete transaction"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                    {(onDelete || onEdit) && (
+                      <TableCell className="text-center">
+                        <div className="flex gap-1 justify-center">
+                          {onEdit && (
+                            <button
+                              onClick={() => onEdit(transaction)}
+                              className="p-1 text-gray-600 hover:bg-blue-100 hover:text-blue-600 rounded transition-colors"
+                              disabled={isLoading}
+                              aria-label="Edit transaction"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm('Delete this transaction?')) {
+                                  onDelete(transaction.id);
+                                }
+                              }}
+                              className="p-1 text-gray-600 hover:bg-red-100 hover:text-red-600 rounded transition-colors"
+                              disabled={isLoading}
+                              aria-label="Delete transaction"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>

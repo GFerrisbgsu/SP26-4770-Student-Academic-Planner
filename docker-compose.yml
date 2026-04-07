@@ -62,6 +62,11 @@ services:
       # Email Configuration
       RESEND_API_KEY: ${RESEND_API_KEY}
       EMAIL_FROM: ${RESEND_FROM_EMAIL:-onboarding@resend.dev}
+      # Persist uploaded course files in shared Docker volume
+      FILE_UPLOAD_DIR: /app/shared/uploads/course-files
+      # Enable seeding to populate programs, semesters, etc. on fresh DB
+      # Seeders are idempotent (skip if data already exists)
+      APP_SEEDING_ENABLED: "true"
     ports:
       - "8080:8080"
     depends_on:
@@ -71,6 +76,7 @@ services:
       - sap-network
     volumes:
       - shared_data:/app/shared
+      - ./backend/uploads:/app/shared/uploads
 
   # ============================================
   # FRONTEND SERVICE (React + Vite)

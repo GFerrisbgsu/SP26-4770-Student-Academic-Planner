@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
@@ -27,6 +28,8 @@ interface BudgetLimitFormProps {
   categories: Category[];
   existingLimits: BudgetLimit[];
   onSubmit: (data: { categoryId: number; limitAmount: string }) => Promise<void>;
+  onEdit: (limit: BudgetLimit) => void;
+  onDelete: (limitId: number) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -34,6 +37,8 @@ export function BudgetLimitForm({
   categories,
   existingLimits,
   onSubmit,
+  onEdit,
+  onDelete,
   isLoading,
 }: BudgetLimitFormProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
@@ -156,7 +161,7 @@ export function BudgetLimitForm({
               return (
                 <div
                   key={limit.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <div
@@ -171,9 +176,19 @@ export function BudgetLimitForm({
                       {limit.categoryName}
                     </span>
                   </div>
-                  <span className="font-semibold text-gray-900">
-                    ${parseFloat(limit.limitAmount).toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900">
+                      ${parseFloat(limit.limitAmount).toFixed(2)}
+                    </span>
+                    <button
+                      onClick={() => onEdit(limit)}
+                      className="p-1 hover:bg-white rounded-md transition-colors"
+                      title="Edit limit"
+                      aria-label={`Edit ${limit.categoryName} limit`}
+                    >
+                      <Edit2 className="w-4 h-4 text-blue-600" />
+                    </button>
+                  </div>
                 </div>
               );
             })}

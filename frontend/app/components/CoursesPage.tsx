@@ -238,7 +238,7 @@ export function CoursesPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-full bg-gray-50">
       
       {/* Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-10">

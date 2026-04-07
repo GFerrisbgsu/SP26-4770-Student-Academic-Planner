@@ -12,12 +12,8 @@ export interface UserSettingsDTO {
   userId: number;
   phoneNumber?: string;
   timeZone?: string;
-  notificationsEnabled: boolean;
-  emailNotifications: boolean;
-  smsNotifications: boolean;
   defaultCalendarView?: string;
   themePreference?: string;
-  reminderMinutesBefore?: number;
   createdAt: string; // ISO 8601 date string from backend LocalDateTime
   updatedAt: string; // ISO 8601 date string from backend LocalDateTime
 }
@@ -29,10 +25,6 @@ export interface UserSettingsDTO {
 export interface UpdateUserSettingsRequest {
   phoneNumber?: string;
   timeZone?: string;
-  notificationsEnabled?: boolean;
-  emailNotifications?: boolean;
-  smsNotifications?: boolean;
   defaultCalendarView?: string;
   themePreference?: string;
-  reminderMinutesBefore?: number;
 }

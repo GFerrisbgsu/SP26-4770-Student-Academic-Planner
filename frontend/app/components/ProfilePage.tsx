@@ -1,25 +1,35 @@
-import { useState } from 'react';
-import { User, Mail, Phone, LogOut, Camera } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { useState, useRef } from 'react';
+import { User, Mail, LogOut, Camera } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { useAuth } from '~/context/AuthContext';
+import { userService } from '~/services/userService';
 import { PasskeyManagement } from '~/components/PasskeyManagement';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 import { ChangePasswordSection } from '~/components/ChangePasswordSection';
 import { Avatar } from '~/components/Avatar';
 import { NotificationPermissionButton } from '~/components/NotificationPermissionButton';
 import { NotificationTestPanel } from '~/components/NotificationTestPanel';
 import { ReminderDashboard } from '~/components/ReminderDashboard';
+import { EditProfileModal } from '~/components/EditProfileModal';
+import { DeleteAccountSection } from '~/components/DeleteAccountSection';
+import { AppearanceSection } from '~/components/AppearanceSection';
+import { PrivacySecurityModal } from '~/components/PrivacySecurityModal';
+import { UserSettingsSection } from '~/components/UserSettingsSection';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export function ProfilePage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showAppearance, setShowAppearance] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
 
   // Handle case where user is not logged in
   if (!user) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-500 mb-4">Please log in to view your profile</p>
           <button
@@ -33,6 +43,25 @@ export function ProfilePage() {
     );
   }
 
+  const avatarUrl = user.avatarUrl
+    ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : `${API_BASE_URL.replace('/api', '')}${user.avatarUrl}`)
+    : undefined;
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      await userService.uploadAvatar(user.id, file);
+      await refreshUser();
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleLogout = async () => {
     if (!window.confirm('Are you sure you want to log out?')) {
       return;
@@ -40,29 +69,20 @@ export function ProfilePage() {
 
     setIsLoggingOut(true);
     try {
-      // Call backend logout endpoint
       await fetch(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
-      }).catch(() => {
-        // If logout endpoint doesn't exist, continue with client-side cleanup
-      });
+      }).catch(() => {});
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
-      // Clear client-side authentication state
       logout();
-
-      // Redirect to login page
       navigate('/login', { replace: true });
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Side Navigation Bar */}
-      {/* Side Navigation Bar handled by root layout */}
-
+    <div className="min-h-full bg-gray-50">
       {/* Profile Content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -76,27 +96,40 @@ export function ProfilePage() {
                 <div className="w-32 h-32 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center overflow-hidden">
                   <Avatar 
                     firstName={user.firstName} 
-                    lastName={user.lastName} 
+                    lastName={user.lastName}
+                    imageUrl={avatarUrl}
                     size="xl"
                     className="border-0 shadow-none"
                   />
                 </div>
                 <button
-                  className="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="absolute bottom-2 right-2 w-10 h-10 bg-white rounded-full shadow-lg border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors disabled:opacity-50"
                   aria-label="Change profile picture"
                 >
                   <Camera className="w-5 h-5 text-gray-600" />
                 </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
               </div>
             </div>
 
             {/* User Info */}
             <div className="space-y-6">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-1">
-                  {user.firstName} {user.lastName}
-                </h1>
-                <p className="text-sm text-gray-500">@{user.username}</p>
+              <div className="flex items-start justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-1">
+                    {user.firstName} {user.lastName}
+                  </h1>
+                  <p className="text-sm text-gray-500">@{user.username}</p>
+                </div>
+                <EditProfileModal />
               </div>
 
               {/* Info Cards */}
@@ -166,11 +199,11 @@ export function ProfilePage() {
           <ReminderDashboard />
         </div>
 
-        {/* Additional Settings Cards (Optional) */}
+        {/* Preferences Section */}
         <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Preferences</h2>
           <div className="space-y-3">
-            {/* Notifications */}
+            {/* Browser Notifications */}
             <div className="p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
               <div className="flex items-start justify-between gap-4 mb-3">
                 <div>
@@ -181,24 +214,49 @@ export function ProfilePage() {
               <NotificationPermissionButton />
             </div>
             
-            <button className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left">
+            {/* Privacy & Security */}
+            <button
+              onClick={() => setShowPrivacyModal(true)}
+              className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left"
+            >
               <div>
                 <p className="text-sm font-medium text-gray-900">Privacy & Security</p>
                 <p className="text-xs text-gray-500">Control your data and security settings</p>
               </div>
-              <div className="text-gray-400">â€º</div>
+              <div className="text-gray-400">›</div>
             </button>
             
-            <button className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left">
+            {/* Appearance */}
+            <button
+              onClick={() => setShowAppearance(!showAppearance)}
+              className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-left"
+            >
               <div>
                 <p className="text-sm font-medium text-gray-900">Appearance</p>
                 <p className="text-xs text-gray-500">Customize theme and display options</p>
               </div>
-              <div className="text-gray-400">â€º</div>
+              <div className="text-gray-400">{showAppearance ? '▾' : '›'}</div>
             </button>
+
+            {/* Appearance Section (inline expand) */}
+            <AppearanceSection open={showAppearance} onOpenChange={setShowAppearance} />
           </div>
         </div>
+
+        {/* User Settings Section */}
+        <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">Settings</h2>
+          <UserSettingsSection />
+        </div>
+
+        {/* Danger Zone */}
+        <div className="mt-6">
+          <DeleteAccountSection />
+        </div>
       </div>
+
+      {/* Privacy & Security Modal */}
+      <PrivacySecurityModal open={showPrivacyModal} onOpenChange={setShowPrivacyModal} />
     </div>
   );
 }

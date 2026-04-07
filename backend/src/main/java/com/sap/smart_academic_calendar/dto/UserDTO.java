@@ -13,17 +13,19 @@ public class UserDTO {
     private String email;
     private String firstName;
     private String lastName;
+    private String avatarUrl;
     private LocalDateTime createdAt;
 
     public UserDTO() {
     }
 
-    public UserDTO(Long id, String username, String email, String firstName, String lastName, LocalDateTime createdAt) {
+    public UserDTO(Long id, String username, String email, String firstName, String lastName, String avatarUrl, LocalDateTime createdAt) {
         this.id = id;
         this.username = username;
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
+        this.avatarUrl = avatarUrl;
         this.createdAt = createdAt;
     }
 
@@ -76,6 +78,14 @@ public class UserDTO {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -152,7 +152,7 @@ export function EventPage({ customEvents, courseColors, onUpdateEvent, onDeleteE
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Event not found</h2>
           <button
@@ -290,7 +290,7 @@ export function EventPage({ customEvents, courseColors, onUpdateEvent, onDeleteE
   const availableTags = Object.entries(allTagConfigs).map(([key, value]) => ({ key, label: value.label }));
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-gray-50">
       {/* Side Navigation Bar */}
       {/* Side Navigation Bar handled by root layout */}
       

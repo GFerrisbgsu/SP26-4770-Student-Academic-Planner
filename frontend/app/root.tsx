@@ -7,6 +7,7 @@ import {
   ScrollRestoration,
   useLocation,
 } from "react-router";
+import { useEffect } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -21,6 +22,7 @@ import { SyncStatusIndicator } from "~/components/SyncStatusIndicator";
 import { Toaster } from "~/components/ui/sonner";
 import { useReminderScheduler } from "~/hooks/useReminderScheduler";
 import { useServiceWorkerRegistration } from "~/hooks/useServiceWorkerRegistration";
+import { initializeTheme } from "~/components/AppearanceSection";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -74,6 +76,11 @@ export default function App() {
   const { isAuthenticated, authLoading } = useAuth();
   const location = useLocation();
 
+  // Initialize theme from localStorage on first render (client-side only)
+  useEffect(() => {
+    initializeTheme();
+  }, []);
+
   // Activate background reminder checking
   useReminderScheduler();
 
@@ -91,9 +98,9 @@ export default function App() {
   const isLoadingScreen = authLoading;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       {!isAuthPage && !isLoadingScreen && <Navbar />}
-      <div className="flex-1 p-8">
+      <div className="flex-1 overflow-y-auto">
         <Outlet />
       </div>
     </div>

@@ -1,0 +1,48 @@
+{
+    "cSpell.words": [
+        "appdb",
+        "apppass",
+        "appuser",
+        "assertj",
+        "BGSU",
+        "BSSE",
+        "Corequisite",
+        "coursicle",
+        "hamcrest",
+        "healthcheck",
+        "Hikari",
+        "isready",
+        "jdbc",
+        "pgadmin",
+        "Pomodoro",
+        "Prereq",
+        "springframework",
+        "webauthn"
+    ],
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.test.config": {
+        "workingDirectory": "${workspaceFolder}/backend",
+        "vmArgs": [
+            "-Dspring.profiles.active=local"
+        ],
+        "env": {
+            "SPRING_PROFILES_ACTIVE": "local"
+        }
+    },
+    "java.test.defaultConfig": "default",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 5432,
+            "driver": "PostgreSQL",
+            "name": "localhost",
+            "database": "appdb",
+            "username": "appuser",
+            "password": "apppass"
+        }
+    ],
+}
+

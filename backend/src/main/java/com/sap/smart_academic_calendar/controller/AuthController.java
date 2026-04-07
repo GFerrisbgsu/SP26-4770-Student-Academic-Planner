@@ -307,6 +307,9 @@ public class AuthController {
                     user.getId(),
                     user.getUsername(),
                     user.getEmail(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getAvatarUrl(),
                     user.getCreatedAt()
             );
 

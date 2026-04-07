@@ -62,10 +62,17 @@ export function SpendingChart({
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           Spending by Category
         </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData}>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart
+            data={chartData}
+            margin={{ top: 20, right: 30, left: 0, bottom: 80 }}
+          >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+            <XAxis
+              dataKey="name"
+              height={80}
+              interval={0}
+            />
             <YAxis />
             <Tooltip
               formatter={(value) => `$${Number(value).toFixed(2)}`}
@@ -91,19 +98,14 @@ export function SpendingChart({
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
         Spending Distribution
       </h3>
-      <ResponsiveContainer width="100%" height={300}>
+      <ResponsiveContainer width="100%" height={350}>
         <PieChart>
           <Pie
             data={chartData}
             cx="50%"
             cy="50%"
             labelLine={false}
-            label={({ name, value }) => (
-              <text fill="#000" fontSize={12} fontWeight="bold">
-                {name}: ${Number(value).toFixed(0)}
-              </text>
-            )}
-            outerRadius={80}
+            outerRadius={70}
             fill="#8884d8"
             dataKey="value"
           >

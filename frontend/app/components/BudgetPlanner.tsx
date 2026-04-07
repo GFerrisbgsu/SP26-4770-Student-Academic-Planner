@@ -9,11 +9,15 @@ import { AddCategoryModal } from '~/components/AddCategoryModal';
 import { EditCategoryModal } from '~/components/EditCategoryModal';
 import { TransactionTable } from '~/components/TransactionTable';
 import { AddTransactionModal } from '~/components/AddTransactionModal';
+import { EditTransactionModal } from '~/components/EditTransactionModal';
 import { AddRecurringIncomeModal } from '~/components/AddRecurringIncomeModal';
 import { RecurringIncomeList } from '~/components/RecurringIncomeList';
 import { BudgetLimitForm } from '~/components/BudgetLimitForm';
+import { EditBudgetLimitModal } from '~/components/EditBudgetLimitModal';
+import { CategoryProgressBars } from '~/components/CategoryProgressBars';
 import * as budgetService from '~/services/budgetService';
 import type { TransactionType, RecurringIncomeDTO } from '~/services/budgetService';
+import type { BudgetSummary, CategorySpending } from '~/types/budget';
 
 interface Category {
   id: number;
@@ -39,11 +43,7 @@ interface BudgetLimit {
   limitAmount: string;
 }
 
-interface BudgetSummary {
-  totalBudget: number;
-  totalSpent: number;
-  remainingBudget: number;
-}
+
 
 export function BudgetPlanner() {
   const { user } = useAuth();
@@ -53,20 +53,27 @@ export function BudgetPlanner() {
   const [budgetLimits, setBudgetLimits] = useState<BudgetLimit[]>([]);
   const [recurringIncomes, setRecurringIncomes] = useState<RecurringIncomeDTO[]>([]);
   const [summary, setSummary] = useState<BudgetSummary>({
+    month: 0,
+    year: 0,
     totalBudget: 0,
     totalSpent: 0,
     remainingBudget: 0,
+    categoryBreakdown: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
+  const [showEditTransactionModal, setShowEditTransactionModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [showAddRecurringIncomeModal, setShowAddRecurringIncomeModal] = useState(false);
   const [editingRecurringIncome, setEditingRecurringIncome] = useState<RecurringIncomeDTO | undefined>();
   const [selectedRecurringIds, setSelectedRecurringIds] = useState<Set<number>>(new Set());
   const [transactionModalType, setTransactionModalType] = useState<TransactionType>('EXPENSE');
   const [chartType, setChartType] = useState<'pie' | 'bar'>('pie');
+  const [showEditBudgetLimitModal, setShowEditBudgetLimitModal] = useState(false);
+  const [editingBudgetLimit, setEditingBudgetLimit] = useState<BudgetLimit | null>(null);
 
   const month = currentDate.getMonth();
   const year = currentDate.getFullYear();
@@ -89,22 +96,19 @@ export function BudgetPlanner() {
 
       setCategories(categoriesData || []);
       setTransactions(transactionsData || []);
-      setSummary(
-        summaryData || {
-          totalBudget: 0,
-          totalSpent: 0,
-          remainingBudget: 0,
-        }
-      );
       setRecurringIncomes(recurringIncomesData || []);
 
       // Auto-populate budget limits from the previous month if none exist for current month
       let finalLimits = limitsData || [];
+      let finalSummary = summaryData;
+      
       if (finalLimits.length === 0) {
         try {
           const copiedLimits = await budgetService.copyLimitsFromPreviousMonth(user.id, month, year);
           if (copiedLimits && copiedLimits.length > 0) {
             finalLimits = copiedLimits;
+            // Refresh summary after limits are copied to include the new limits data
+            finalSummary = await budgetService.getBudgetSummary(user.id, month, year);
           }
         } catch (error) {
           console.debug('No budget limits to copy from previous month:', error);
@@ -112,6 +116,16 @@ export function BudgetPlanner() {
         }
       }
       
+      setSummary(
+        finalSummary || {
+          month: 0,
+          year: 0,
+          totalBudget: 0,
+          totalSpent: 0,
+          remainingBudget: 0,
+          categoryBreakdown: [],
+        }
+      );
       setBudgetLimits(finalLimits);
     } catch (error) {
       console.error('Error loading budget data:', error);
@@ -226,6 +240,45 @@ export function BudgetPlanner() {
     }
   };
 
+  // Handle edit transaction
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setShowEditTransactionModal(true);
+  };
+
+  // Handle update transaction
+  const handleUpdateTransaction = async (data: {
+    categoryId: number | null;
+    amount: string;
+    description: string;
+    transactionDate: string;
+    type: TransactionType;
+  }) => {
+    if (!user || !editingTransaction) return;
+    try {
+      const updated = await budgetService.updateTransaction(
+        user.id,
+        editingTransaction.id,
+        data
+      );
+      setTransactions(
+        transactions.map((t) => (t.id === editingTransaction.id ? updated : t))
+      );
+      // Refresh summary
+      const updatedSummary = await budgetService.getBudgetSummary(
+        user.id,
+        month,
+        year
+      );
+      setSummary(updatedSummary);
+      setShowEditTransactionModal(false);
+      setEditingTransaction(null);
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw error;
+    }
+  };
+
   // Handle set budget limit
   const handleSetBudgetLimit = async (data: {
     categoryId: number;
@@ -252,6 +305,53 @@ export function BudgetPlanner() {
       }
     } catch (error) {
       console.error('Error setting budget limit:', error);
+      throw error;
+    }
+  };
+
+  // Handle edit budget limit
+  const handleEditBudgetLimit = (limit: BudgetLimit) => {
+    setEditingBudgetLimit(limit);
+    setShowEditBudgetLimitModal(true);
+  };
+
+  // Handle update budget limit
+  const handleUpdateBudgetLimit = async (data: {
+    categoryId: number;
+    limitAmount: string;
+  }) => {
+    if (!user || !editingBudgetLimit) return;
+    try {
+      const updated = await budgetService.updateBudgetLimit(
+        user.id,
+        editingBudgetLimit.id,
+        data
+      );
+      setBudgetLimits(
+        budgetLimits.map((l) =>
+          l.id === editingBudgetLimit.id ? updated : l
+        )
+      );
+      setShowEditBudgetLimitModal(false);
+      setEditingBudgetLimit(null);
+    } catch (error) {
+      console.error('Error updating budget limit:', error);
+      throw error;
+    }
+  };
+
+  // Handle delete budget limit
+  const handleDeleteBudgetLimit = async () => {
+    if (!user || !editingBudgetLimit) return;
+    try {
+      await budgetService.deleteBudgetLimit(user.id, editingBudgetLimit.id);
+      setBudgetLimits(
+        budgetLimits.filter((l) => l.id !== editingBudgetLimit.id)
+      );
+      setShowEditBudgetLimitModal(false);
+      setEditingBudgetLimit(null);
+    } catch (error) {
+      console.error('Error deleting budget limit:', error);
       throw error;
     }
   };
@@ -409,14 +509,16 @@ export function BudgetPlanner() {
     .filter(tx => tx.type === 'EXPENSE')
     .reduce(
       (acc, transaction) => {
-        const existing = acc.find((item) => item.name === transaction.categoryName);
+        // Use "Uncategorized" for transactions with no category name
+        const categoryName = transaction.categoryName || 'Uncategorized';
+        const existing = acc.find((item) => item.name === categoryName);
         if (existing) {
           existing.value += parseFloat(transaction.amount);
         } else {
           acc.push({
-            name: transaction.categoryName,
+            name: categoryName,
             value: parseFloat(transaction.amount),
-            color: transaction.categoryColor,
+            color: transaction.categoryColor || '#6b7280', // Default gray for uncategorized
           });
         }
         return acc;
@@ -439,14 +541,14 @@ export function BudgetPlanner() {
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-full flex items-center justify-center">
         <p className="text-gray-500">Please log in to access Budget Planner</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-gray-50">
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -487,9 +589,9 @@ export function BudgetPlanner() {
         <div className="space-y-8">
           {/* Summary */}
           <BudgetSummaryCard
-            totalBudget={summary.totalBudget}
-            totalSpent={summary.totalSpent}
-            remainingBudget={summary.remainingBudget}
+            totalBudget={typeof summary.totalBudget === 'string' ? parseFloat(summary.totalBudget) : summary.totalBudget}
+            totalSpent={typeof summary.totalSpent === 'string' ? parseFloat(summary.totalSpent) : summary.totalSpent}
+            remainingBudget={typeof summary.remainingBudget === 'string' ? parseFloat(summary.remainingBudget) : summary.remainingBudget}
             month={monthName}
             year={year}
           />
@@ -536,6 +638,14 @@ export function BudgetPlanner() {
             categories={categories}
             existingLimits={budgetLimits}
             onSubmit={handleSetBudgetLimit}
+            onEdit={handleEditBudgetLimit}
+            onDelete={handleDeleteBudgetLimit}
+            isLoading={isLoading}
+          />
+
+          {/* Category Progress Bars */}
+          <CategoryProgressBars
+            categories={summary.categoryBreakdown || []}
             isLoading={isLoading}
           />
 
@@ -574,6 +684,7 @@ export function BudgetPlanner() {
           {/* Transactions Table */}
           <TransactionTable
             transactions={transactions}
+            onEdit={handleEditTransaction}
             onDelete={handleDeleteTransaction}
             isLoading={isLoading}
           />
@@ -604,6 +715,22 @@ export function BudgetPlanner() {
         categories={categories}
         isLoading={isLoading}
         defaultType={transactionModalType}
+        budgetLimits={budgetLimits}
+        categoryBreakdown={summary.categoryBreakdown || []}
+      />
+
+      <EditTransactionModal
+        open={showEditTransactionModal}
+        onOpenChange={(open) => {
+          setShowEditTransactionModal(open);
+          if (!open) setEditingTransaction(null);
+        }}
+        transaction={editingTransaction}
+        onSubmit={handleUpdateTransaction}
+        categories={categories}
+        isLoading={isLoading}
+        budgetLimits={budgetLimits}
+        categoryBreakdown={summary.categoryBreakdown || []}
       />
 
       <AddRecurringIncomeModal
@@ -615,6 +742,16 @@ export function BudgetPlanner() {
         onSubmit={handleCreateRecurringIncome}
         categories={categories}
         initialData={editingRecurringIncome}
+        isLoading={isLoading}
+      />
+
+      <EditBudgetLimitModal
+        open={showEditBudgetLimitModal}
+        onOpenChange={setShowEditBudgetLimitModal}
+        limit={editingBudgetLimit}
+        categories={categories}
+        onSubmit={handleUpdateBudgetLimit}
+        onDelete={handleDeleteBudgetLimit}
         isLoading={isLoading}
       />
     </div>

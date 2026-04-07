@@ -151,6 +151,18 @@ export async function setBudgetLimit(userId: number, month: number, year: number
   return res.json();
 }
 
+export async function updateBudgetLimit(userId: number, limitId: number, data: {
+  categoryId: number;
+  limitAmount: string;
+}) {
+  const res = await apiFetch(`/budget/limits/${limitId}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to update budget limit");
+  return res.json();
+}
+
 export async function deleteBudgetLimit(userId: number, limitId: number) {
   const res = await apiFetch(`/budget/limits/${limitId}`, {
     method: "DELETE",
@@ -166,7 +178,7 @@ export async function deleteBudgetLimit(userId: number, limitId: number) {
 }
 
 export async function copyLimitsFromPreviousMonth(userId: number, month: number, year: number) {
-  const res = await apiFetch(`/budget/limits/copy-from-previous?month=${month}&year=${year}`, {
+  const res = await apiFetch(`/budget/limits/copy-previous?month=${month}&year=${year}`, {
     method: "POST",
   });
   if (!res.ok) throw new Error("Failed to copy budget limits from previous month");

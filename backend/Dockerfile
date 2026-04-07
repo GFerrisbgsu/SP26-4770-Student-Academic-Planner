@@ -31,8 +31,8 @@ WORKDIR /app
 # Create non-root user for security
 RUN addgroup -S spring && adduser -S spring -G spring
 
-# Create shared volume mount point
-RUN mkdir -p /app/shared && chown -R spring:spring /app
+# Create shared volume mount point and avatar upload directory
+RUN mkdir -p /app/shared /app/uploads/avatars && chown -R spring:spring /app
 
 # Copy the built JAR file
 COPY --from=build /app/target/*.jar app.jar

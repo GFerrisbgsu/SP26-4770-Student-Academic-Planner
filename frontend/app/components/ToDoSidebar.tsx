@@ -86,8 +86,8 @@ function SortableTodoListTab({ list, isSelected, onSelect, onRename, onDelete }:
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    backgroundColor: isSelected ? list.color : '#f3f4f6',
-    color: isSelected ? 'white' : '#374151',
+    backgroundColor: isSelected ? list.color : 'var(--muted)',
+    color: isSelected ? 'white' : 'var(--foreground)',
     borderColor: list.color,
     borderWidth: isSelected ? '0' : '2px',
     borderStyle: 'solid' as const,

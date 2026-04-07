@@ -1,17 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 interface AvatarProps {
   firstName: string;
   lastName: string;
+  imageUrl?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
 /**
- * Avatar component that generates a profile picture with user's initials
+ * Avatar component that displays a profile image or generates initials
  * Uses a deterministic color based on the user's name for consistency
  */
-export function Avatar({ firstName, lastName, size = 'md', className = '' }: AvatarProps) {
+export function Avatar({ firstName, lastName, imageUrl, size = 'md', className = '' }: AvatarProps) {
+  const [imgError, setImgError] = useState(false);
   // Generate initials
   const initials = useMemo(() => {
     const firstInitial = firstName?.charAt(0)?.toUpperCase() || '';
@@ -55,6 +57,17 @@ export function Avatar({ firstName, lastName, size = 'md', className = '' }: Ava
   };
 
   const sizeClass = sizeClasses[size];
+
+  if (imageUrl && !imgError) {
+    return (
+      <img
+        src={imageUrl}
+        alt={`${firstName} ${lastName}`}
+        className={`${sizeClass} rounded-full object-cover ${className}`}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
 
   return (
     <div 

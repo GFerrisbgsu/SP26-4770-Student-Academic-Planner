@@ -145,7 +145,7 @@ export function CalendarView({
     : [...allPredefinedEvents, ...customEvents, ...assignmentTasks];
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50">
 
       {/* Main Content Area - Side by Side */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">

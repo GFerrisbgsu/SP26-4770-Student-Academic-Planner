@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const BASE_URL = `${API_BASE_URL}/files`;
+const API_ORIGIN = new URL(API_BASE_URL).origin;
 
 export type CourseFileType = 'pdf' | 'image' | 'document' | 'link' | 'folder';
 export type CourseFileCategory = 'syllabus' | 'lecture' | 'assignment' | 'resource' | 'other';
@@ -87,11 +88,80 @@ export async function createFile(courseId: string, request: CreateCourseFileRequ
   });
 
   if (!res.ok) {
-    throw new Error('Failed to create file');
+    const errorText = await res.text();
+    throw new Error(errorText || 'Failed to create file');
   }
 
   const data: CourseFileDTO = await res.json();
   return mapCourseFile(data);
+}
+
+export async function uploadCourseFile(
+  courseId: string,
+  file: globalThis.File,
+  name?: string,
+  category: CourseFileCategory = 'other'
+): Promise<CourseFileItem> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (name?.trim()) {
+    formData.append('name', name.trim());
+  }
+  formData.append('category', category);
+
+  const res = await fetch(`${BASE_URL}/course/${courseId}/upload`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || 'Failed to upload file');
+  }
+
+  const data: CourseFileDTO = await res.json();
+  return mapCourseFile(data);
+}
+
+export function resolveCourseFileUrl(fileUrl?: string): string | undefined {
+  if (!fileUrl) {
+    return undefined;
+  }
+
+  if (/^https?:\/\//i.test(fileUrl)) {
+    return fileUrl;
+  }
+
+  // Backend returns server-relative routes like /api/files/{id}/download.
+  // Use API origin so we do not accidentally produce /api/api/... URLs.
+  if (fileUrl.startsWith('/')) {
+    return `${API_ORIGIN}${fileUrl}`;
+  }
+
+  const normalizedPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+  return `${API_BASE_URL}${normalizedPath}`;
+}
+
+export function resolveCourseFilePreviewUrl(fileUrl?: string): string | undefined {
+  const resolvedUrl = resolveCourseFileUrl(fileUrl);
+  if (!resolvedUrl) {
+    return undefined;
+  }
+
+  if (resolvedUrl.endsWith('/download')) {
+    return `${resolvedUrl.slice(0, -'/download'.length)}/preview`;
+  }
+
+  return resolvedUrl;
+}
+
+export function getCourseFilePreviewUrl(fileId: number): string {
+  return `${API_ORIGIN}/api/files/${fileId}/preview`;
+}
+
+export function getCourseFileDownloadUrl(fileId: number): string {
+  return `${API_ORIGIN}/api/files/${fileId}/download`;
 }
 
 export async function updateFile(

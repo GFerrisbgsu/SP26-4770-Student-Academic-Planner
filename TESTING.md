@@ -264,3 +264,37 @@
 | #47 | application-prod.properties correctly configures PostgreSQL, CORS, JWT, and Flyway settings | Manual | Pass
 | #47 | Spring profile is set to prod via SPRING_PROFILES_ACTIVE on Railway | Manual | Pass
 | #47 | Flyway baseline-on-migrate is enabled for production database initialization | Manual | Pass
+
+##Sprint #9
+| Issue # | Description | Manual/Auto Testing | Result |
+|---------|-------------|-------------------|--------|
+| #13 | Do the pie/bar chart render correctly with transaction data | Manual | Pass
+| #13 | Does switching months update displayed transactions correctly | Manual | Pass
+| #13 | Does deleting a transaction update in the correct places | Manual | Pass
+| #13 | Are transactions sorted by transaction date instead of created date | Manual | Pass
+| #13 | Can a user edit a transaction successfully | Manual | Pass
+| #13 | Does exceeding/reaching a category budget trigger a warning | Manual | Pass
+| #13 | Do category progress bars correctly display/update after transaction changes | Manual | Pass
+| #16 | Can a user save current day's time blocks as a named preset | Manual | Pass
+| #16 | Preset Library modal displays all saved presets and loads blocks to selected date | Manual | Pass
+| #16 | User can edit a preset's name and description from the Edit Preset modal | Manual | Pass
+| #16 | User can delete a preset from the library with confirmation dialog | Manual | Pass
+| #16 | Preset data persists across page refreshes and new browser sessions | Manual | Pass
+| #16 | Loading a preset adds blocks without removing existing blocks on the date | Manual | Pass
+| #24 | BGSU theme applies dark brown sidebar with orange text and icons | Manual | Pass
+| #24 | Pages do not scroll beyond viewport; sidebar stays fixed alongside content | Manual | Pass
+| #24 | Course map popup shows single course code label (no duplicate) | Manual | Pass
+| #24 | Course map enroll button hover uses readable light background instead of dark brown | Manual | Pass
+| #24 | Avatar upload and delete work without 403 Forbidden error | Manual | Pass
+| #24 | Profile page renders correctly after build (no JSX syntax errors) | Manual | Pass
+| #24 | Degree progress page loads without 500 error when seeding is enabled | Manual | Pass
+| #24 | Clear Profile Data button resets user settings and refreshes page | Manual | Pass
+| #24 | Focus rings use brown color instead of orange across BGSU theme | Manual | Pass
+| #21 | Note creation, updating, and deletion is saved across sessions | Manual | Pass
+| #21 | File creation and deletion is saved across sessions | Manual | Pass
+| #21 | Users have rich text editing for notes | Manual | Pass
+| #21 | Users can upload files (not just metadata) | Manual | Pass
+| #21 | Pdf files can be previewed | Manual | Pass
+| #21 | Png and jpg files can be previewed | Manual | Pass
+| #21 | Link files can be previewed | Manual | Pass
+| #21 | All fields in "upload file" modal are accurate and user-friendly | Manual | Pass

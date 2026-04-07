@@ -21,12 +21,18 @@ import {
 import {
   getFilesByCourse,
   createFile,
+  uploadCourseFile,
   deleteFile as deleteCourseFile,
+  getCourseFileDownloadUrl,
+  getCourseFilePreviewUrl,
+  resolveCourseFileUrl,
+  resolveCourseFilePreviewUrl,
   type CourseFileItem,
   type CourseFileType,
   type CourseFileCategory,
 } from '~/services/fileService';
 import type { Course } from '~/types/course';
+import { RichTextEditor } from '~/components/RichTextEditor';
 // ...existing code...
 import canvasLogo from '~/assets/22343b487a124e74995e468c0388ab2b6ab33dd7.png';
 import coursicleLogo from '~/assets/8a64e37773e95c0484d47cd65db7a39fb7ef7f7d.png';
@@ -42,6 +48,14 @@ interface Note {
 
 interface CoursePageProps {
   courseColors: Record<string, string>;
+}
+
+function stripHtmlToPlainText(content: string): string {
+  return content
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
@@ -146,6 +160,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
   const [fileCategory, setFileCategory] = useState<CourseFileCategory>('other');
   const [fileSize, setFileSize] = useState('');
   const [fileUrl, setFileUrl] = useState('');
+  const [selectedUploadFile, setSelectedUploadFile] = useState<globalThis.File | null>(null);
 
   useEffect(() => {
     async function loadNotes() {
@@ -203,7 +218,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <p className="text-lg text-gray-500">Loading course...</p>
         </div>
@@ -213,7 +228,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
 
   if (!course) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-2xl font-semibold mb-4">Course not found</h2>
           <Link to="/" className="text-blue-600 hover:underline">
@@ -237,7 +252,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
   };
 
   const handleSaveNote = async () => {
-    if (!noteTitle.trim() || !noteContent.trim()) {
+    if (!noteTitle.trim() || !stripHtmlToPlainText(noteContent)) {
       alert('Please fill in both title and content');
       return;
     }
@@ -315,33 +330,58 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
     setFileCategory('other');
     setFileSize('');
     setFileUrl('');
+    setSelectedUploadFile(null);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) {
+      return `${bytes} B`;
+    }
+
+    const kb = bytes / 1024;
+    if (kb < 1024) {
+      return `${kb.toFixed(1)} KB`;
+    }
+
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
   };
 
   const handleSaveFile = async () => {
-    if (!fileName.trim()) {
-      alert('Please provide a file name.');
-      return;
-    }
-
     if (!courseId) {
       alert('Course not found. Unable to save file.');
       return;
     }
 
+    if (!selectedUploadFile && !fileName.trim()) {
+      alert('Please choose a file to upload or provide a file name.');
+      return;
+    }
+
     try {
-      const createdFile = await createFile(courseId, {
-        name: fileName.trim(),
-        fileType,
-        category: fileCategory,
-        fileSize: fileSize.trim() || undefined,
-        fileUrl: fileUrl.trim() || undefined,
-      });
+      let createdFile: CourseFileItem;
+
+      if (selectedUploadFile) {
+        createdFile = await uploadCourseFile(courseId, selectedUploadFile, fileName.trim(), fileCategory);
+      } else {
+        createdFile = await createFile(courseId, {
+          name: fileName.trim(),
+          fileType,
+          category: fileCategory,
+          fileSize: fileSize.trim() || undefined,
+          fileUrl: fileUrl.trim() || undefined,
+        });
+      }
+
       setFiles(prev => [createdFile, ...prev]);
       setShowFileModal(false);
       resetFileForm();
     } catch (error) {
       console.error('Failed to save file:', error);
-      alert('Failed to save file. Please try again.');
+      const errorMessage = error instanceof Error && error.message
+        ? error.message
+        : 'Please try again.';
+      alert(`Failed to save file: ${errorMessage}`);
     }
   };
 
@@ -354,6 +394,87 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
         console.error('Failed to delete file:', error);
         alert('Failed to delete file. Please try again.');
       }
+    }
+  };
+
+  const handleDownloadFile = (file: CourseFileItem) => {
+    const targetUrl = resolveCourseFileUrl(file.url);
+    if (!targetUrl) {
+      alert('No downloadable URL is available for this file.');
+      return;
+    }
+
+    window.open(targetUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handlePreviewFile = async (file: CourseFileItem) => {
+    if (file.type === 'folder') {
+      alert('Folder preview is not available.');
+      return;
+    }
+
+    if (file.type === 'link') {
+      const linkUrl = resolveCourseFileUrl(file.url);
+      if (!linkUrl) {
+        alert('No preview URL is available for this file.');
+        return;
+      }
+
+      window.open(linkUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    const targetUrl = getCourseFilePreviewUrl(file.id);
+
+    if (!targetUrl) {
+      alert('No preview URL is available for this file.');
+      return;
+    }
+
+    const previewWindow = window.open('', '_blank');
+    if (!previewWindow) {
+      alert('Unable to open preview window. Please allow pop-ups for this site.');
+      return;
+    }
+
+    previewWindow.document.title = file.name;
+    previewWindow.document.body.innerHTML = '<p style="font-family: sans-serif; padding: 16px;">Loading preview...</p>';
+
+    try {
+      let response = await fetch(targetUrl, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.status === 404) {
+        const downloadUrl = getCourseFileDownloadUrl(file.id);
+        response = await fetch(downloadUrl, {
+          method: 'GET',
+          credentials: 'include',
+        });
+      }
+
+      if (!response.ok) {
+        previewWindow.close();
+        if (response.status === 404) {
+          alert('Unable to preview this file. It may be an older file entry without uploaded content; try re-uploading it.');
+        } else {
+          alert(`Unable to preview file (status ${response.status}).`);
+        }
+        return;
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      previewWindow.location.href = blobUrl;
+
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 60_000);
+    } catch (error) {
+      previewWindow.close();
+      console.error('Failed to preview file:', error);
+      alert('Failed to preview file. Please try again.');
     }
   };
 
@@ -481,7 +602,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-gray-50">
       {/* Side Navigation Bar */}
       {/* Side Navigation Bar handled by root layout */}
       
@@ -874,7 +995,7 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                         </button>
                       </div>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3 whitespace-pre-line line-clamp-4">{note.content}</p>
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-4">{stripHtmlToPlainText(note.content)}</p>
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <span>Last edited: {note.lastEdited.toLocaleDateString()}</span>
                       {note.tags.length > 0 && (
@@ -942,13 +1063,15 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                     <div className="flex items-center gap-3 flex-1">
                       {getFileIcon(file.type)}
                       <div className="flex-1">
-                        <div className="font-medium text-sm text-gray-900">{file.name}</div>
+                        <button
+                          onClick={() => handlePreviewFile(file)}
+                          className="font-medium text-sm text-gray-900 hover:text-blue-600 hover:underline text-left"
+                        >
+                          {file.name}
+                        </button>
                         <div className="text-xs text-gray-500">
                           {file.size && `${file.size} • `}
                           Uploaded {file.uploadDate.toLocaleDateString()}
-                          {file.type === 'link' && file.url && (
-                            <> • <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">{file.url}</a></>
-                          )}
                         </div>
                       </div>
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
@@ -956,7 +1079,11 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                       </span>
                     </div>
                     <div className="flex gap-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 transition-colors">
+                      <button
+                        onClick={() => handleDownloadFile(file)}
+                        className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                        aria-label={`Download ${file.name}`}
+                      >
                         <Download className="w-4 h-4" />
                       </button>
                       <button
@@ -1126,13 +1253,13 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
                 <label htmlFor="note-content" className="block text-sm font-medium text-gray-700 mb-1">
                   Content
                 </label>
-                <textarea
-                  id="note-content"
-                  value={noteContent}
-                  onChange={(e) => setNoteContent(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[300px] font-mono text-sm"
-                  placeholder="Write your notes here..."
-                />
+                <div id="note-content" className="w-full">
+                  <RichTextEditor
+                    value={noteContent}
+                    onChange={setNoteContent}
+                    placeholder="Use the toolbar for rich text formatting."
+                  />
+                </div>
               </div>
             </div>
 
@@ -1178,6 +1305,39 @@ export function EnhancedCoursePage({ courseColors }: CoursePageProps) {
             </div>
 
             <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                  Choose File
+                </label>
+                <input
+                  id="file-upload"
+                  type="file"
+                  onChange={(e) => {
+                    const selectedFile = e.target.files?.[0] || null;
+                    setSelectedUploadFile(selectedFile);
+                    if (selectedFile) {
+                      setFileName(selectedFile.name);
+                      setFileSize(formatFileSize(selectedFile.size));
+                    }
+                  }}
+                  className="sr-only"
+                />
+                <div className="w-full px-3 py-2 border border-gray-300 rounded-lg flex items-center gap-3">
+                  <label
+                    htmlFor="file-upload"
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                  >
+                    Choose File
+                  </label>
+                  <span className="text-sm text-gray-600 truncate">
+                    {selectedUploadFile ? selectedUploadFile.name : 'No file chosen'}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Upload from your device, or leave empty to create a link/folder metadata entry.
+                </p>
+              </div>
+
               <div>
                 <label htmlFor="file-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Name

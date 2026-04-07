@@ -35,7 +35,7 @@ export function DegreeProgressPage() {
   // Return loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Loading degree progress...</p>
@@ -47,7 +47,7 @@ export function DegreeProgressPage() {
   // Return error state
   if (error || !degreeInfo) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-full bg-gray-50 flex items-center justify-center">
         <div className="text-center bg-white p-8 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Degree Progress</h2>
           <p className="text-gray-600 mb-6">{error || 'No degree progress data found'}</p>
@@ -80,7 +80,7 @@ export function DegreeProgressPage() {
 
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-full bg-gray-50">
       {/* Side Navigation Bar */}
       {/* Side Navigation Bar handled by root layout */}
       

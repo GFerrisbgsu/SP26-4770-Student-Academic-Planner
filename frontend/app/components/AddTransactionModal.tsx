@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import {
   Dialog,
@@ -17,11 +18,19 @@ import {
   SelectValue,
 } from '~/components/ui/select';
 import type { TransactionType } from '~/services/budgetService';
+import type { CategorySpending } from '~/types/budget';
 
 interface Category {
   id: number;
   name: string;
   color: string;
+}
+
+interface BudgetLimit {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  limitAmount: string;
 }
 
 interface AddTransactionModalProps {
@@ -37,6 +46,8 @@ interface AddTransactionModalProps {
   categories: Category[];
   isLoading?: boolean;
   defaultType?: TransactionType;
+  budgetLimits?: BudgetLimit[];
+  categoryBreakdown?: CategorySpending[];
 }
 
 export function AddTransactionModal({
@@ -46,6 +57,8 @@ export function AddTransactionModal({
   categories,
   isLoading,
   defaultType = 'EXPENSE',
+  budgetLimits = [],
+  categoryBreakdown = [],
 }: AddTransactionModalProps) {
   const [categoryId, setCategoryId] = useState('');
   const [amount, setAmount] = useState('');
@@ -55,6 +68,42 @@ export function AddTransactionModal({
   );
   const [type, setType] = useState<TransactionType>(defaultType);
   const [error, setError] = useState('');
+
+  // Calculate budget warning
+  const calculateBudgetWarning = () => {
+    // Only show warnings for expenses
+    if (type !== 'EXPENSE' || !categoryId || !amount) {
+      return null;
+    }
+
+    const selectedCategoryId = parseInt(categoryId);
+    const budgetLimit = budgetLimits.find((limit) => limit.categoryId === selectedCategoryId);
+
+    if (!budgetLimit) {
+      return null; // No budget limit set for this category
+    }
+
+    const limit = parseFloat(budgetLimit.limitAmount);
+    const newAmount = parseFloat(amount);
+    const categorySpending = categoryBreakdown.find((cat) => cat.categoryId === selectedCategoryId);
+    const currentSpent = categorySpending
+      ? parseFloat(categorySpending.spent.toString())
+      : 0;
+    const newTotal = currentSpent + newAmount;
+
+    if (newTotal > limit) {
+      return {
+        exceedsBy: newTotal - limit,
+        currentSpent,
+        limit,
+        categoryName: budgetLimit.categoryName,
+      };
+    }
+
+    return null;
+  };
+
+  const budgetWarning = calculateBudgetWarning();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +218,23 @@ export function AddTransactionModal({
               autoFocus
             />
           </div>
+
+          {budgetWarning && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-amber-900">
+                  Budget Exceeded for {budgetWarning.categoryName}
+                </p>
+                <p className="text-amber-800 mt-1">
+                  Current spending: ${budgetWarning.currentSpent.toFixed(2)} + ${parseFloat(amount).toFixed(2)} = ${(budgetWarning.currentSpent + parseFloat(amount)).toFixed(2)}
+                </p>
+                <p className="text-amber-800">
+                  Budget limit: ${budgetWarning.limit.toFixed(2)} (exceeds by ${budgetWarning.exceedsBy.toFixed(2)})
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Description (Optional)</Label>

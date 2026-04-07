@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
 import { Label } from '~/components/ui/label';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +11,8 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog';
 import { AlertCircle, CheckCircle2, Loader2, Mail } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 interface ForgotPasswordModalProps {
   open: boolean;

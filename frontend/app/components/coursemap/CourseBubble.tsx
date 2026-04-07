@@ -67,7 +67,7 @@ export function CourseBubble({ bubble, enrollment, isCurrentSemester, onClick }:
           {!enrollment && bubble.type === 'pool' && (
             <p className="text-xs text-muted-foreground">Click to choose a course</p>
           )}
-          {!enrollment && bubble.type === 'fixed' && (
+          {!enrollment && bubble.type === 'fixed' && bubble.courseCode && bubble.courseCode !== bubble.label && (
             <p className="text-xs text-muted-foreground">{bubble.courseCode}</p>
           )}
         </TooltipContent>

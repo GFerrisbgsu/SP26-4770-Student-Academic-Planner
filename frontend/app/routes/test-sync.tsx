@@ -104,7 +104,7 @@ export default function TestSync() {
   const queueInfo = getQueueInfo(); // Recalculated on each render
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-full bg-gray-50 p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="bg-white rounded-lg shadow p-6">

@@ -33,23 +33,11 @@ public class UserSettings {
     @Column(name = "time_zone", length = 100)
     private String timeZone;
 
-    @Column(name = "notifications_enabled", nullable = false)
-    private Boolean notificationsEnabled = true;
-
-    @Column(name = "email_notifications", nullable = false)
-    private Boolean emailNotifications = true;
-
-    @Column(name = "sms_notifications", nullable = false)
-    private Boolean smsNotifications = false;
-
     @Column(name = "default_calendar_view", length = 50)
     private String defaultCalendarView;
 
     @Column(name = "theme_preference", length = 50)
     private String themePreference;
-
-    @Column(name = "reminder_minutes_before")
-    private Integer reminderMinutesBefore;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -61,12 +49,8 @@ public class UserSettings {
     public UserSettings() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        this.notificationsEnabled = true;
-        this.emailNotifications = true;
-        this.smsNotifications = false;
         this.defaultCalendarView = "week";
         this.themePreference = "light";
-        this.reminderMinutesBefore = 15;
     }
 
     public UserSettings(User user) {
@@ -107,30 +91,6 @@ public class UserSettings {
         this.timeZone = timeZone;
     }
 
-    public Boolean getNotificationsEnabled() {
-        return notificationsEnabled;
-    }
-
-    public void setNotificationsEnabled(Boolean notificationsEnabled) {
-        this.notificationsEnabled = notificationsEnabled;
-    }
-
-    public Boolean getEmailNotifications() {
-        return emailNotifications;
-    }
-
-    public void setEmailNotifications(Boolean emailNotifications) {
-        this.emailNotifications = emailNotifications;
-    }
-
-    public Boolean getSmsNotifications() {
-        return smsNotifications;
-    }
-
-    public void setSmsNotifications(Boolean smsNotifications) {
-        this.smsNotifications = smsNotifications;
-    }
-
     public String getDefaultCalendarView() {
         return defaultCalendarView;
     }
@@ -145,14 +105,6 @@ public class UserSettings {
 
     public void setThemePreference(String themePreference) {
         this.themePreference = themePreference;
-    }
-
-    public Integer getReminderMinutesBefore() {
-        return reminderMinutesBefore;
-    }
-
-    public void setReminderMinutesBefore(Integer reminderMinutesBefore) {
-        this.reminderMinutesBefore = reminderMinutesBefore;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot (Dev)",
+            "request": "launch",
+            "mainClass": "com.sap.smart_academic_calendar.Init",
+            "vmArgs": "-Dspring.profiles.active=dev",
+            "env": {
+                // Database Configuration
+                "DATASOURCE_URL": "jdbc:postgresql://localhost:5432/appdb",
+                "DATASOURCE_DRIVER": "org.postgresql.Driver",
+                "DATASOURCE_USERNAME": "appuser",
+                "DATASOURCE_PASSWORD": "apppass",
+                "SPRING_JPA_SHOW_SQL": "true",
+                
+                // JWT Configuration
+                "JWT_SECRET": "bG9jYWwtZGV2LXNlY3JldC0zMi1ieXRlcy1sb25nISE=",
+                "JWT_ACCESS_EXPIRATION_MINUTES": "15",
+                "JWT_REFRESH_EXPIRATION_DAYS": "7",
+                "JWT_REFRESH_EXPIRATION_DAYS_REMEMBER_ME": "30",
+                
+                // WebAuthn / Passkeys Configuration
+                "WEBAUTHN_RP_ID": "localhost",
+                "WEBAUTHN_ORIGIN": "http://localhost:8080",
+                
+                // Resend Email API (for email verification)
+                // Get your API key from: https://resend.com/api-keys
+                "RESEND_API_KEY": "re_35QTC9Ri_MJcFH3Hu3zAvahzkfXU7uzC5",
+                "EMAIL_FROM": "noreply@smartacademiccalendar.com"
+            }
+        }
+    ]
+}

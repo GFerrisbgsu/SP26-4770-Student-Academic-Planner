@@ -10,6 +10,7 @@ export interface AuthUser {
   email: string;
   firstName: string;
   lastName: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextValue {
@@ -19,6 +20,7 @@ interface AuthContextValue {
   login: (request: LoginRequest) => Promise<void>;
   register: (request: CreateUserRequest) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   // Passkey methods
   loginWithPasskey: () => Promise<void>;
   registerPasskey: (name: string) => Promise<void>;
@@ -114,12 +116,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: response.email,
         firstName: response.firstName ?? '',
         lastName: response.lastName ?? '',
+        avatarUrl: (response as unknown as Record<string, unknown>).avatarUrl as string | undefined,
       };
       justLoggedInRef.current = true;
       setUser(nextUser);
     } catch (error) {
       console.error('[AuthContext] Login failed:', error);
-      throw error; // Re-throw so calling component can display the error
+      throw error;
     } finally {
       setAuthLoading(false);
     }
@@ -161,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: response.email,
         firstName: response.firstName ?? '',
         lastName: response.lastName ?? '',
+        avatarUrl: (response as unknown as Record<string, unknown>).avatarUrl as string | undefined,
       };
 
       // Store user in localStorage for persistence across page refreshes
@@ -173,6 +177,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     } finally {
       setAuthLoading(false);
+    }
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    try {
+      const userData = await userService.getCurrentUserFromBackend();
+      const nextUser: AuthUser = {
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        firstName: userData.firstName ?? '',
+        lastName: userData.lastName ?? '',
+        avatarUrl: userData.avatarUrl,
+      };
+      localStorage.setItem('currentUser', JSON.stringify(nextUser));
+      setUser(nextUser);
+    } catch (error) {
+      console.error('[AuthContext] Failed to refresh user:', error);
     }
   }, []);
 
@@ -211,12 +233,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       register,
       logout,
+      refreshUser,
       loginWithPasskey,
       registerPasskey,
       listUserPasskeys,
       deleteUserPasskey,
     }),
-    [user, authLoading, sessionCheckInFlight, login, register, logout, loginWithPasskey, registerPasskey, listUserPasskeys, deleteUserPasskey]
+    [user, authLoading, sessionCheckInFlight, login, register, logout, refreshUser, loginWithPasskey, registerPasskey, listUserPasskeys, deleteUserPasskey]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

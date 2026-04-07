@@ -1,4 +1,5 @@
 import type { DegreeProgressDTO, RequirementCategoryDTO } from '~/types/course';
+import { apiFetch } from '~/services/apiClient';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const BASE_URL = `${API_BASE_URL}/courses`;
@@ -41,9 +42,7 @@ export interface CreateCourseRequest {
  * Get all courses
  */
 export async function getAllCourses(): Promise<Course[]> {
-  const res = await fetch(`${BASE_URL}`, {
-    credentials: 'include' // Send HttpOnly cookies for authentication
-  })
+  const res = await apiFetch(`${BASE_URL}`)
   if (!res.ok) throw new Error("Failed to fetch courses")
   return res.json()
 }
@@ -52,9 +51,7 @@ export async function getAllCourses(): Promise<Course[]> {
  * Get a specific course by ID
  */
 export async function getCourseById(id: string): Promise<Course> {
-  const res = await fetch(`${BASE_URL}/${id}`, {
-    credentials: 'include'
-  })
+  const res = await apiFetch(`${BASE_URL}/${id}`)
   if (!res.ok) throw new Error(`Failed to fetch course ${id}`)
   return res.json()
 }
@@ -63,9 +60,7 @@ export async function getCourseById(id: string): Promise<Course> {
  * Get all enrolled courses
  */
 export async function getEnrolledCourses(): Promise<Course[]> {
-  const res = await fetch(`${BASE_URL}/enrolled`, {
-    credentials: 'include'
-  })
+  const res = await apiFetch(`${BASE_URL}/enrolled`)
   if (!res.ok) throw new Error("Failed to fetch enrolled courses")
   return res.json()
 }
@@ -74,9 +69,7 @@ export async function getEnrolledCourses(): Promise<Course[]> {
  * Get courses by subject
  */
 export async function getCoursesBySubject(subject: string): Promise<Course[]> {
-  const res = await fetch(`${BASE_URL}/subject/${subject}`, {
-    credentials: 'include'
-  })
+  const res = await apiFetch(`${BASE_URL}/subject/${subject}`)
   if (!res.ok) throw new Error(`Failed to fetch courses for subject ${subject}`)
   return res.json()
 }
@@ -85,9 +78,8 @@ export async function getCoursesBySubject(subject: string): Promise<Course[]> {
  * Create a new course
  */
 export async function createCourse(courseData: CreateCourseRequest): Promise<Course> {
-  const res = await fetch(`${BASE_URL}`, {
+  const res = await apiFetch(`${BASE_URL}`, {
     method: "POST",
-    credentials: 'include',
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(courseData)
   })
@@ -99,9 +91,8 @@ export async function createCourse(courseData: CreateCourseRequest): Promise<Cou
  * Update an existing course
  */
 export async function updateCourse(id: string, courseData: CreateCourseRequest): Promise<Course> {
-  const res = await fetch(`${BASE_URL}/${id}`, {
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
     method: "PUT",
-    credentials: 'include',
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(courseData)
   })
@@ -113,9 +104,8 @@ export async function updateCourse(id: string, courseData: CreateCourseRequest):
  * Delete a course
  */
 export async function deleteCourse(id: string): Promise<void> {
-  const res = await fetch(`${BASE_URL}/${id}`, {
-    method: "DELETE",
-    credentials: 'include'
+  const res = await apiFetch(`${BASE_URL}/${id}`, {
+    method: "DELETE"
   })
   if (!res.ok) throw new Error(`Failed to delete course ${id}`)
 }
@@ -126,9 +116,8 @@ export async function deleteCourse(id: string): Promise<void> {
  */
 export async function enrollInCourse(id: string, schedule?: string): Promise<Course> {
   const params = schedule ? `?schedule=${encodeURIComponent(schedule)}` : ''
-  const res = await fetch(`${BASE_URL}/${id}/enroll${params}`, {
-    method: "PATCH",
-    credentials: 'include'
+  const res = await apiFetch(`${BASE_URL}/${id}/enroll${params}`, {
+    method: "PATCH"
   })
   if (!res.ok) throw new Error(`Failed to enroll in course ${id}`)
   return res.json()
@@ -138,9 +127,8 @@ export async function enrollInCourse(id: string, schedule?: string): Promise<Cou
  * Unenroll from a course (sets enrolled=false).
  */
 export async function unenrollFromCourse(id: string): Promise<Course> {
-  const res = await fetch(`${BASE_URL}/${id}/unenroll`, {
-    method: "PATCH",
-    credentials: 'include'
+  const res = await apiFetch(`${BASE_URL}/${id}/unenroll`, {
+    method: "PATCH"
   })
   if (!res.ok) throw new Error(`Failed to unenroll from course ${id}`)
   return res.json()
@@ -150,26 +138,21 @@ export async function unenrollFromCourse(id: string): Promise<Course> {
  * Update a course's schedule.
  */
 export async function updateCourseSchedule(id: string, schedule: string): Promise<Course> {
-  const res = await fetch(`${BASE_URL}/${id}/schedule?schedule=${encodeURIComponent(schedule)}`, {
-    method: "PATCH",
-    credentials: 'include'
+  const res = await apiFetch(`${BASE_URL}/${id}/schedule?schedule=${encodeURIComponent(schedule)}`, {
+    method: "PATCH"
   })
   if (!res.ok) throw new Error(`Failed to update schedule for course ${id}`)
   return res.json()
 }
 
 export async function getDegreeProgress(): Promise<DegreeProgressDTO> {
-  const res = await fetch(`${BASE_URL}/degree/progress`, {
-    credentials: 'include'
-  });
+  const res = await apiFetch(`${BASE_URL}/degree/progress`);
   if (!res.ok) throw new Error("Failed to fetch degree progress");
   return res.json();
 }
 
 export async function getRequirementCategories(): Promise<RequirementCategoryDTO[]> {
-  const res = await fetch(`${BASE_URL}/degree/requirements`, {
-    credentials: 'include'
-  });
+  const res = await apiFetch(`${BASE_URL}/degree/requirements`);
   if (!res.ok) throw new Error("Failed to fetch requirement categories");
   return res.json();
 }

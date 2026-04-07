@@ -13,7 +13,19 @@ export interface UserDTO {
   email: string;
   firstName: string;
   lastName: string;
+  avatarUrl?: string;
   createdAt: string; // ISO 8601 date string from backend LocalDateTime
+}
+
+/**
+ * Request model for updating an existing user's profile
+ * Matches UpdateUserRequest.java in backend
+ */
+export interface UpdateUserRequest {
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 /**

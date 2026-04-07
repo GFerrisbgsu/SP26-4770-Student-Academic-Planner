@@ -283,6 +283,24 @@ public class BudgetService {
     }
 
     /**
+     * Update an existing budget limit
+     */
+    @Transactional
+    public BudgetLimitDTO updateBudgetLimit(Long userId, Long limitId, CreateBudgetLimitRequest request) {
+        validateUserExists(userId);
+        BudgetLimit limit = budgetLimitRepository.findByIdAndUserId(limitId, userId)
+            .orElseThrow(() -> new RuntimeException("Budget limit not found"));
+        
+        // Verify category belongs to user
+        budgetCategoryRepository.findByIdAndUserId(request.categoryId(), userId)
+            .orElseThrow(() -> new RuntimeException("Category not found"));
+        
+        limit.setLimitAmount(request.limitAmount());
+        BudgetLimit saved = budgetLimitRepository.save(limit);
+        return convertLimitToDTO(saved, userId, limit.getMonth(), limit.getYear());
+    }
+
+    /**
      * Delete a budget limit
      */
     @Transactional

@@ -39,9 +39,6 @@ public class CorsConfig {
         config.addAllowedOrigin("http://localhost:3000");  // Production/Docker frontend
         config.addAllowedOrigin("http://frontend:3000");   // Docker internal network
 
-        // Railway deployed frontend
-        config.addAllowedOrigin("https://student-acadamic-calendar.up.railway.app");
-
         // Allow additional origins from environment (e.g. Railway deployed frontend)
         if (additionalOrigins != null && !additionalOrigins.isBlank()) {
             for (String origin : additionalOrigins.split(",")) {

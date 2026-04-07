@@ -1,9 +1,11 @@
 package com.sap.smart_academic_calendar.service;
 
 import com.sap.smart_academic_calendar.dto.CreateUserRequest;
+import com.sap.smart_academic_calendar.dto.UpdateUserRequest;
 import com.sap.smart_academic_calendar.dto.UserDTO;
 import com.sap.smart_academic_calendar.model.User;
 import com.sap.smart_academic_calendar.repository.UserRepository;
+import com.sap.smart_academic_calendar.repository.UserSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -24,12 +26,15 @@ public class UserService {
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
+    private final UserSettingsRepository userSettingsRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
     private final TodoListService todoListService;
 
-    public UserService(UserRepository userRepository, EmailService emailService, PasswordEncoder passwordEncoder, TodoListService todoListService) {
+    public UserService(UserRepository userRepository, UserSettingsRepository userSettingsRepository,
+                       EmailService emailService, PasswordEncoder passwordEncoder, TodoListService todoListService) {
         this.userRepository = userRepository;
+        this.userSettingsRepository = userSettingsRepository;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
         this.todoListService = todoListService;
@@ -37,12 +42,24 @@ public class UserService {
 
     @Transactional
     public UserDTO createUser(CreateUserRequest request) {
-        // Validate input
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already exists");
+        // Validate input fields are not null or empty
+        if (request.getUsername() == null || request.getUsername().trim().isEmpty()) {
+            throw new RuntimeException("Username is required");
         }
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new RuntimeException("Email is required");
+        }
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new RuntimeException("Password is required");
+        }
+
+        // Check if username already exists
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new RuntimeException("Username already exists: " + request.getUsername());
+        }
+        // Check if email already exists
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new RuntimeException("Email already exists: " + request.getEmail());
         }
 
         // Hash password before storing
@@ -56,8 +73,11 @@ public class UserService {
             request.getLastName() != null ? request.getLastName() : "",
             hashedPassword
         );
-        // Auto-verify users since email delivery is not available yet
-        user.setEmailVerified(true);
+        user.setEmailVerified(false);
+
+        String verificationCode = emailService.generateVerificationCode();
+        user.setVerificationCode(verificationCode);
+        user.setVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(15));
 
         User savedUser = userRepository.save(user);
 
@@ -67,6 +87,18 @@ public class UserService {
         } catch (Exception e) {
             log.error("Failed to create default to-do lists for user {}: {}", savedUser.getId(), e.getMessage());
             // Don't fail user creation if list creation fails
+        }
+
+        // Send verification email - don't fail user creation if email fails
+        try {
+            emailService.sendVerificationEmail(
+                savedUser.getEmail(),
+                savedUser.getUsername(),
+                verificationCode
+            );
+        } catch (Exception e) {
+            log.error("Failed to send verification email to {}: {}", savedUser.getEmail(), e.getMessage());
+            // User can request resend later
         }
 
         return convertToDTO(savedUser);
@@ -242,11 +274,55 @@ public class UserService {
         return convertToDTO(user);
     }
 
+    @Transactional
+    public UserDTO updateUser(Long id, UpdateUserRequest request) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new RuntimeException("Username already exists: " + request.getUsername());
+            }
+            user.setUsername(request.getUsername());
+        }
+        if (request.getFirstName() != null) {
+            user.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null) {
+            user.setLastName(request.getLastName());
+        }
+        if (request.getEmail() != null && !request.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new RuntimeException("Email already exists: " + request.getEmail());
+            }
+            user.setEmail(request.getEmail());
+        }
+
+        User saved = userRepository.save(user);
+        log.info("Updated profile for user: {}", saved.getUsername());
+        return convertToDTO(saved);
+    }
+
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+
+        // Delete related settings
+        userSettingsRepository.deleteByUserId(id);
+
+        userRepository.delete(user);
+        log.info("Deleted user account: {}", user.getUsername());
+    }
+
     private UserDTO convertToDTO(User user) {
         return new UserDTO(
             user.getId(),
             user.getUsername(),
             user.getEmail(),
+            user.getFirstName(),
+            user.getLastName(),
+            user.getAvatarUrl(),
             user.getCreatedAt()
         );
     }

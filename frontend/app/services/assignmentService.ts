@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const BASE_URL = `${API_BASE_URL}/assignments`;
+import { apiFetch } from '~/services/apiClient';
 
 export type AssignmentStatus = 'todo' | 'in-progress' | 'completed';
 
@@ -80,7 +81,7 @@ function mapAssignment(dto: AssignmentDTO): Assignment {
 
 export async function getAssignmentsByCourse(courseId: string, status?: AssignmentStatus): Promise<Assignment[]> {
   const statusParam = status ? `?status=${encodeURIComponent(toBackendStatus(status))}` : '';
-  const res = await fetch(`${BASE_URL}/course/${courseId}${statusParam}`, {
+  const res = await apiFetch(`${BASE_URL}/course/${courseId}${statusParam}`, {
     credentials: 'include',
   });
 
@@ -110,7 +111,7 @@ export async function getAssignmentsForCourses(courseIds: string[]): Promise<Ass
 }
 
 export async function createAssignment(courseId: string, request: CreateAssignmentRequest): Promise<Assignment> {
-  const res = await fetch(`${BASE_URL}/course/${courseId}`, {
+  const res = await apiFetch(`${BASE_URL}/course/${courseId}`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -131,7 +132,7 @@ export async function updateAssignment(assignmentId: number, request: UpdateAssi
     status: request.status ? toBackendStatus(request.status) : undefined,
   };
 
-  const res = await fetch(`${BASE_URL}/${assignmentId}`, {
+  const res = await apiFetch(`${BASE_URL}/${assignmentId}`, {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -147,7 +148,7 @@ export async function updateAssignment(assignmentId: number, request: UpdateAssi
 }
 
 export async function deleteAssignment(assignmentId: number): Promise<void> {
-  const res = await fetch(`${BASE_URL}/${assignmentId}`, {
+  const res = await apiFetch(`${BASE_URL}/${assignmentId}`, {
     method: 'DELETE',
     credentials: 'include',
   });

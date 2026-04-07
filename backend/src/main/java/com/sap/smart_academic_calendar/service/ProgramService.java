@@ -3,8 +3,6 @@ package com.sap.smart_academic_calendar.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +25,7 @@ import com.sap.smart_academic_calendar.repository.ProgramRepository;
 @Service
 public class ProgramService {
 
-    private static final Logger log = LoggerFactory.getLogger(ProgramService.class);
+
 
     private final ProgramRepository programRepository;
 

@@ -43,6 +43,12 @@ public class CourseFile {
     @Column(name = "file_url", columnDefinition = "TEXT")
     private String fileUrl;
 
+    @Column(name = "storage_path", columnDefinition = "TEXT")
+    private String storagePath;
+
+    @Column(name = "content_type", length = 255)
+    private String contentType;
+
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt;
 
@@ -56,12 +62,26 @@ public class CourseFile {
     }
 
     public CourseFile(Course course, String name, String fileType, String category, String fileSize, String fileUrl) {
+        this(course, name, fileType, category, fileSize, fileUrl, null, null);
+    }
+
+    public CourseFile(
+            Course course,
+            String name,
+            String fileType,
+            String category,
+            String fileSize,
+            String fileUrl,
+            String storagePath,
+            String contentType) {
         this.course = course;
         this.name = name;
         this.fileType = fileType;
         this.category = category;
         this.fileSize = fileSize;
         this.fileUrl = fileUrl;
+        this.storagePath = storagePath;
+        this.contentType = contentType;
         this.uploadedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -120,6 +140,22 @@ public class CourseFile {
 
     public void setFileUrl(String fileUrl) {
         this.fileUrl = fileUrl;
+    }
+
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public void setStoragePath(String storagePath) {
+        this.storagePath = storagePath;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
     }
 
     public LocalDateTime getUploadedAt() {

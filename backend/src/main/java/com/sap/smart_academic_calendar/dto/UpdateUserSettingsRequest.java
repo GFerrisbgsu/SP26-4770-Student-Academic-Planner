@@ -8,12 +8,8 @@ public class UpdateUserSettingsRequest {
 
     private String phoneNumber;
     private String timeZone;
-    private Boolean notificationsEnabled;
-    private Boolean emailNotifications;
-    private Boolean smsNotifications;
     private String defaultCalendarView;
     private String themePreference;
-    private Integer reminderMinutesBefore;
 
     public UpdateUserSettingsRequest() {}
 
@@ -34,30 +30,6 @@ public class UpdateUserSettingsRequest {
         this.timeZone = timeZone;
     }
 
-    public Boolean getNotificationsEnabled() {
-        return notificationsEnabled;
-    }
-
-    public void setNotificationsEnabled(Boolean notificationsEnabled) {
-        this.notificationsEnabled = notificationsEnabled;
-    }
-
-    public Boolean getEmailNotifications() {
-        return emailNotifications;
-    }
-
-    public void setEmailNotifications(Boolean emailNotifications) {
-        this.emailNotifications = emailNotifications;
-    }
-
-    public Boolean getSmsNotifications() {
-        return smsNotifications;
-    }
-
-    public void setSmsNotifications(Boolean smsNotifications) {
-        this.smsNotifications = smsNotifications;
-    }
-
     public String getDefaultCalendarView() {
         return defaultCalendarView;
     }
@@ -72,13 +44,5 @@ public class UpdateUserSettingsRequest {
 
     public void setThemePreference(String themePreference) {
         this.themePreference = themePreference;
-    }
-
-    public Integer getReminderMinutesBefore() {
-        return reminderMinutesBefore;
-    }
-
-    public void setReminderMinutesBefore(Integer reminderMinutesBefore) {
-        this.reminderMinutesBefore = reminderMinutesBefore;
     }
 }

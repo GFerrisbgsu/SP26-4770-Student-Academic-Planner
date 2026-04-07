@@ -148,7 +148,7 @@ export function Sidebar({
 
   if (loading) {
     return (
-      <div className={`${isCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 h-screen overflow-hidden transition-all duration-300`}>
+      <div className={`${isCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 h-full overflow-hidden transition-all duration-300`}>
         <div className="p-6">
           <p className="text-gray-500">Loading courses...</p>
         </div>
@@ -158,7 +158,7 @@ export function Sidebar({
 
   return (
     <>
-      <div className={`${isCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 h-screen overflow-hidden transition-all duration-300`}>
+      <div className={`${isCollapsed ? 'w-0' : 'w-80'} bg-white border-r border-gray-200 h-full overflow-hidden transition-all duration-300`}>
         <div className="p-6 overflow-y-auto h-full hide-scrollbar">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">

@@ -1,8 +1,9 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 const BASE_URL = `${API_BASE_URL}/events`;
+import { apiFetch } from '~/services/apiClient';
 
 export async function getUserEvents(userId: number) {
-  const res = await fetch(`${BASE_URL}/user/${userId}`, {
+  const res = await apiFetch(`${BASE_URL}/user/${userId}`, {
     credentials: 'include' // Send HttpOnly cookies for authentication
   })
   if (!res.ok) throw new Error("Failed to fetch events")
@@ -10,7 +11,7 @@ export async function getUserEvents(userId: number) {
 }
 
 export async function createEvent(userId: number, eventData: any) {
-  const res = await fetch(`${BASE_URL}/user/${userId}`, {
+  const res = await apiFetch(`${BASE_URL}/user/${userId}`, {
     method: "POST",
     credentials: 'include', // Send HttpOnly cookies for authentication
     headers: { "Content-Type": "application/json" },
@@ -21,14 +22,14 @@ export async function createEvent(userId: number, eventData: any) {
 }
 
 export async function deleteEvent(eventId: number) {
-  await fetch(`${BASE_URL}/${eventId}`, {
+  await apiFetch(`${BASE_URL}/${eventId}`, {
     method: "DELETE",
     credentials: 'include' // Send HttpOnly cookies for authentication
   })
 }
 
 export async function updateEvent(eventId: number, eventData: any) {
-  const res = await fetch(`${BASE_URL}/${eventId}`, {
+  const res = await apiFetch(`${BASE_URL}/${eventId}`, {
     method: "PUT",
     credentials: 'include', // Send HttpOnly cookies for authentication
     headers: { "Content-Type": "application/json" },
@@ -39,7 +40,7 @@ export async function updateEvent(eventId: number, eventData: any) {
 }
 
 export async function deleteEventsByCourse(userId: number, courseId: string) {
-  await fetch(`${BASE_URL}/user/${userId}/course/${courseId}`, {
+  await apiFetch(`${BASE_URL}/user/${userId}/course/${courseId}`, {
     method: "DELETE",
     credentials: 'include' // Send HttpOnly cookies for authentication
   })

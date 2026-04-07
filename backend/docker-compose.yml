@@ -48,6 +48,11 @@ services:
       DATASOURCE_USERNAME: appuser
       DATASOURCE_PASSWORD: apppass
       DATASOURCE_DRIVER: org.postgresql.Driver
+      JWT_SECRET: "c3AyNi00NzcwLXNtYXJ0LWFjYWRlbWljLWNhbGVuZGFyLXN1cGVyLXNlY3JldC1qd3Qta2V5LWRldmVsb3BtZW50LW9ubHktMTIzNDU2Nzg5"
+      # Persist uploaded course files in shared Docker volume
+      FILE_UPLOAD_DIR: /app/shared/uploads/course-files
+      # Avoid startup crash from optional seeders in existing DB
+      APP_SEEDING_ENABLED: "false"
     ports:
       - "8080:8080"
     depends_on:
@@ -57,6 +62,7 @@ services:
       - sap-network
     volumes:
       - shared_data:/app/shared
+      - ./uploads:/app/shared/uploads
 
   # ============================================
   # FRONTEND SERVICE (React + Vite)

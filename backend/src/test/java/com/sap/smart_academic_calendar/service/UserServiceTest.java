@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -34,6 +35,15 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private EmailService emailService;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private TodoListService todoListService;
 
     @InjectMocks
     private UserService userService;
@@ -178,8 +188,11 @@ class UserServiceTest {
         @DisplayName("Should create user with valid data")
         void shouldCreateUserWithValidData() {
             // Given
+            when(passwordEncoder.encode(anyString())).thenReturn("encoded_password");
+            when(emailService.generateVerificationCode()).thenReturn("VERIFY123");
+            
             CreateUserRequest request = new CreateUserRequest("new_user", "new@example.com", "password");
-            User savedUser = createUser(3L, "new_user", "new@example.com", "password");
+            User savedUser = createUser(3L, "new_user", "new@example.com", "encoded_password");
             
             when(userRepository.existsByUsername("new_user")).thenReturn(false);
             when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
@@ -203,7 +216,12 @@ class UserServiceTest {
         @DisplayName("Should save user with correct fields")
         void shouldSaveUserWithCorrectFields() {
             // Given
+            when(passwordEncoder.encode("testpass")).thenReturn("encoded_testpass");
+            when(emailService.generateVerificationCode()).thenReturn("VERIFY123");
+            
             CreateUserRequest request = new CreateUserRequest("test_user", "test@example.com", "testpass");
+            when(userRepository.existsByUsername("test_user")).thenReturn(false);
+            when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
             when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
                 User user = invocation.getArgument(0);
                 user.setId(10L);
@@ -217,7 +235,7 @@ class UserServiceTest {
             verify(userRepository).save(argThat(user -> 
                 user.getUsername().equals("test_user") &&
                 user.getEmail().equals("test@example.com") &&
-                user.getPassword().equals("testpass")
+                user.getPassword().equals("encoded_testpass")  // Password should be encoded
             ));
         }
 
