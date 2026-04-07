@@ -3,11 +3,14 @@ package com.sap.smart_academic_calendar.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 /**
  * CORS Configuration
@@ -57,5 +60,21 @@ public class CorsConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    /**
+     * Register a CorsFilter at the highest servlet filter priority so it runs
+     * BEFORE the Spring Security filter chain. This guarantees preflight OPTIONS
+     * requests always receive proper CORS headers even if something in the
+     * security chain fails. Spring's DefaultCorsProcessor will skip if headers
+     * are already present, so there is no duplication risk.
+     */
+    @Bean
+    public FilterRegistrationBean<CorsFilter> corsFilterRegistration(
+            CorsConfigurationSource corsConfigurationSource) {
+        CorsFilter corsFilter = new CorsFilter(corsConfigurationSource);
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(corsFilter);
+        bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return bean;
     }
 }
