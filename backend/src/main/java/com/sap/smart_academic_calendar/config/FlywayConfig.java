@@ -18,7 +18,7 @@ import org.springframework.context.annotation.Profile;
  * Both profiles use PostgreSQL and require Flyway migrations.
  */
 @Configuration
-@Profile({"dev", "docker"})
+@Profile({"dev", "docker", "prod"})
 public class FlywayConfig {
 
     @Bean(initMethod = "migrate")
