@@ -2,13 +2,16 @@ package com.sap.smart_academic_calendar.service.seeding;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.sap.smart_academic_calendar.model.Course;
 import com.sap.smart_academic_calendar.model.CourseInfo;
 import com.sap.smart_academic_calendar.model.PrerequisiteEntry;
 import com.sap.smart_academic_calendar.model.PrerequisiteType;
@@ -1002,6 +1005,43 @@ public class CourseInfoSeeder implements DataSeeder<CourseInfo> {
         courseInfoList.add(ci("span2120", List.of(
             pre("span2010", "SPAN 2010 or placement")),
             "Foreign Language", "Spanish"));
+
+        // Create stub courses for any IDs referenced here but missing from CourseSeeder
+        Set<String> existingIds = courseRepository.findAll().stream()
+                .map(Course::getId)
+                .collect(Collectors.toSet());
+        Set<String> referencedIds = courseInfoList.stream()
+                .map(CourseInfo::getCourseId)
+                .collect(Collectors.toSet());
+        List<Course> stubs = new ArrayList<>();
+        for (String id : referencedIds) {
+            if (!existingIds.contains(id)) {
+                String upper = id.replaceAll("(\\d)", " $1").trim().toUpperCase().replaceFirst(" ", " ");
+                String code = id.replaceAll("([a-zA-Z]+)(\\d+)", "$1 $2").toUpperCase();
+                String subject = id.replaceAll("\\d+", "").toUpperCase();
+                String number = id.replaceAll("[a-zA-Z]+", "");
+                Course stub = new Course();
+                stub.setId(id);
+                stub.setName(code);
+                stub.setCode(code);
+                stub.setSubject(subject);
+                stub.setNumber(number);
+                stub.setColor("bg-gray-400");
+                stub.setInstructor("TBD");
+                stub.setSchedule("TBD");
+                stub.setCredits(3);
+                stub.setEnrolled(false);
+                stub.setSemesters(Collections.emptyList());
+                stub.setHistory(Collections.emptyList());
+                stub.setDescription("");
+                stub.setPrerequisiteText("");
+                stubs.add(stub);
+            }
+        }
+        if (!stubs.isEmpty()) {
+            courseRepository.saveAll(stubs);
+            log.info("Created {} stub courses for CourseInfo foreign keys", stubs.size());
+        }
 
         // Save all course info
         courseInfoRepository.saveAll(courseInfoList);
