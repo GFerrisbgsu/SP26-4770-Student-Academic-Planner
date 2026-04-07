@@ -1779,7 +1779,12 @@ public class CourseSeeder implements DataSeeder<Course> {
 
     @Override
     public boolean shouldSeed() {
-        return courseRepository.count() == 0;
+        try {
+            return courseRepository.count() == 0;
+        } catch (Exception e) {
+            log.warn("Could not count courses (table may not exist yet), proceeding with seeding: {}", e.getMessage());
+            return true;
+        }
     }
 
 }
