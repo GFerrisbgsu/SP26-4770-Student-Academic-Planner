@@ -6,7 +6,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -37,9 +36,6 @@ public class CorsConfig {
 
     private static final Logger log = LoggerFactory.getLogger(CorsConfig.class);
 
-    @Value("${app.cors.allowed-origins:}")
-    private String additionalOrigins;
-
     @Bean
     public FilterRegistrationBean<Filter> corsFilter() {
         // Build the allowed-origins list once at startup
@@ -48,8 +44,12 @@ public class CorsConfig {
         allowedOrigins.add("http://localhost:3000");   // Production / Docker frontend
         allowedOrigins.add("http://frontend:3000");    // Docker internal network
 
-        if (additionalOrigins != null && !additionalOrigins.isBlank()) {
-            for (String origin : additionalOrigins.split(",")) {
+        // Read directly from OS environment variable to avoid Spring property resolution issues
+        String envOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+        log.info("CORS: Raw CORS_ALLOWED_ORIGINS env var = '{}'", envOrigins);
+
+        if (envOrigins != null && !envOrigins.isBlank()) {
+            for (String origin : envOrigins.split(",")) {
                 String trimmed = origin.trim();
                 if (!trimmed.isEmpty()) {
                     log.info("CORS: Adding allowed origin from env: '{}'", trimmed);
@@ -57,7 +57,7 @@ public class CorsConfig {
                 }
             }
         } else {
-            log.warn("CORS: No additional origins configured (CORS_ALLOWED_ORIGINS is empty)");
+            log.warn("CORS: No additional origins configured (CORS_ALLOWED_ORIGINS env var is empty or not set)");
         }
 
         log.info("CORS: Allowed origins = {}", allowedOrigins);
