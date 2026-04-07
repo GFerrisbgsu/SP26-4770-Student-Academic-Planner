@@ -43,6 +43,7 @@ public class CorsConfig {
         allowedOrigins.add("http://localhost:5173");   // Vite dev server
         allowedOrigins.add("http://localhost:3000");   // Production / Docker frontend
         allowedOrigins.add("http://frontend:3000");    // Docker internal network
+        allowedOrigins.add("https://student-acadamic-calendar.up.railway.app"); // Railway production
 
         // Read directly from OS environment variable to avoid Spring property resolution issues
         String envOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
